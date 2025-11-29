@@ -54,6 +54,18 @@ const commonThemeOptions = {
       xl: 1536,
     },
   },
+  palette: {
+    info: {
+      main: '#05a2e4',
+      hover: '#02648d',
+    },
+    success: {
+      main: '#66bb6a',
+    },
+    error: {
+      main: '#f44336',
+    },
+  },
   MuiDialog: {
     styleOverrides: {
       paper: {

@@ -18,7 +18,7 @@ interface QortalRequestOptions {
   encryptedData?: string;
   exactMatchNames?: boolean;
   excludeBlocked?: boolean;
-  fee?: number | any;
+  fee?: number | string;
   file?: File;
   filename?: string;
   host?: string;

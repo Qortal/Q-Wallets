@@ -57,6 +57,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Refresh } from '@mui/icons-material';
 import {
+  ARRR_FEE,
   EMPTY_STRING,
   TIME_MINUTES_2,
   TIME_MINUTES_3,
@@ -160,22 +161,12 @@ function TablePaginationActions(props: TablePaginationActionsProps) {
 
 export default function PirateWallet() {
   const { t } = useTranslation(['core']);
+  const theme = useTheme();
   const { isUsingGateway } = useContext(WalletContext);
-
-  if (isUsingGateway) {
-    return (
-      <Alert variant="filled" severity="error">
-        {t('core:message.error.pirate_chain_gateway', {
-          postProcess: 'capitalizeEachFirst',
-        })}
-      </Alert>
-    );
-  }
-
   const [isSynced, setIsSynced] = useState(false);
   const [syncStatus, setSyncStatus] = useState(EMPTY_STRING);
   const [walletInfoArrr, setWalletInfoArrr] = useState<any>({});
-  const [walletBalanceArrr, setWalletBalanceArrr] = useState<any>(null);
+  const [walletBalanceArrr, setWalletBalanceArrr] = useState<any>(0);
   const [isLoadingWalletBalanceArrr, setIsLoadingWalletBalanceArrr] =
     useState<boolean>(true);
   const [allLightwalletServersArrr, setAllLightwalletServersArrr] =
@@ -227,21 +218,16 @@ export default function PirateWallet() {
     setArrrRecipient(EMPTY_STRING);
     setArrrMemo(EMPTY_STRING);
     setOpenArrrSend(true);
+    setAddressFormatError(false);
+    setOpenSendArrrError(false);
   };
 
-  const disableCanSendArrr = () => {
-    if (arrrAmount <= 0 || null || !arrrAmount) {
-      return true;
-    }
-    if (addressFormatError || EMPTY_STRING) {
-      return true;
-    }
-    return false;
-  };
+  const disableCanSendArrr = () =>
+    arrrAmount <= 0 || arrrRecipient === EMPTY_STRING || addressFormatError;
 
   const handleRecipientChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const pattern = /^(zs1[2-9A-HJ-NP-Za-z]{75})$/;
+    const value = e.target.value.trim();
+    const pattern = /^(zs1[a-zA-Z0-9]{75})$/;
     setArrrRecipient(value);
     if (pattern.test(value) || value === EMPTY_STRING) {
       setAddressFormatError(false);
@@ -255,6 +241,8 @@ export default function PirateWallet() {
     setArrrRecipient(EMPTY_STRING);
     setArrrMemo(EMPTY_STRING);
     setOpenArrrSend(false);
+    setAddressFormatError(false);
+    setOpenSendArrrError(false);
   };
 
   const changeCopyArrrTxHash = async () => {
@@ -358,6 +346,8 @@ export default function PirateWallet() {
 
   const getWalletBalanceArrr = async () => {
     try {
+      setIsLoadingWalletBalanceArrr(true);
+
       const response = await qortalRequestWithTimeout(
         {
           action: 'GET_WALLET_BALANCE',
@@ -367,12 +357,12 @@ export default function PirateWallet() {
       );
       if (!response?.error) {
         setWalletBalanceArrr(response);
-        setIsLoadingWalletBalanceArrr(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       setWalletBalanceArrr(null);
-      setIsLoadingWalletBalanceArrr(false);
       console.error('ERROR GET ARRR BALANCE', error);
+    } finally {
+      setIsLoadingWalletBalanceArrr(false);
     }
   };
 
@@ -467,7 +457,9 @@ export default function PirateWallet() {
               );
               setIsSynced(false);
               counter += 1;
-              await new Promise((resolve) => setTimeout(resolve, TIME_SECONDS_5));
+              await new Promise((resolve) =>
+                setTimeout(resolve, TIME_SECONDS_5)
+              );
             } else if (response === 'Initializing wallet...') {
               setChangeServer(false);
               setSyncStatus(
@@ -477,12 +469,16 @@ export default function PirateWallet() {
               );
               setIsSynced(false);
               counter2 += 1;
-              await new Promise((resolve) => setTimeout(resolve, TIME_SECONDS_5));
+              await new Promise((resolve) =>
+                setTimeout(resolve, TIME_SECONDS_5)
+              );
             } else {
               setChangeServer(false);
               setSyncStatus(response);
               setIsSynced(false);
-              await new Promise((resolve) => setTimeout(resolve, TIME_SECONDS_5));
+              await new Promise((resolve) =>
+                setTimeout(resolve, TIME_SECONDS_5)
+              );
             }
           } else {
             setIsSynced(true);
@@ -535,6 +531,16 @@ export default function PirateWallet() {
     getArrrSyncStatus();
   }, []);
 
+  if (isUsingGateway) {
+    return (
+      <Alert variant="filled" severity="error">
+        {t('core:message.error.pirate_chain_gateway', {
+          postProcess: 'capitalizeEachFirst',
+        })}
+      </Alert>
+    );
+  }
+
   const setNewCurrentArrrServer = async (
     typeServer: string,
     hostServer: string,
@@ -549,8 +555,8 @@ export default function PirateWallet() {
         port: portServer,
       });
       if (!setServer?.error) {
-        await getLightwalletServersArrr();
         setOpenArrrLightwallet(false);
+        await getLightwalletServersArrr();
         await getWalletBalanceArrr();
         await getTransactionsArrr();
       }
@@ -585,152 +591,6 @@ export default function PirateWallet() {
       await getArrrSyncStatus();
       console.error('ERROR GET ARRR SERVERS INFO', error);
     }
-  };
-
-  const ArrrLightwalletDialogPage = () => {
-    return (
-      <LightwalletDialog
-        onClose={handleCloseArrrLightwallet}
-        aria-labelledby="arrr-electrum-servers"
-        open={openArrrLightwallet}
-        keepMounted={false}
-      >
-        <DialogTitle
-          sx={{ m: 0, p: 2, fontSize: '14px' }}
-          id="arrr-electrum-servers"
-        >
-          {t('core:message.generic.pirate_chain_servers', {
-            postProcess: 'capitalizeFirstChar',
-          })}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Box
-            sx={{
-              width: '100%',
-              maxWidth: 500,
-              position: 'relative',
-              overflow: 'auto',
-              maxHeight: 400,
-            }}
-          >
-            <List>
-              {allLightwalletServersArrr.map(
-                (
-                  server: {
-                    connectionType: string;
-                    hostName: string;
-                    port: number;
-                  },
-                  i: Key
-                ) => (
-                  <ListItemButton
-                    key={i}
-                    onClick={() => {
-                      setNewCurrentArrrServer(
-                        server?.connectionType,
-                        server?.hostName,
-                        server?.port
-                      );
-                    }}
-                  >
-                    <ListItemText
-                      primary={
-                        server?.connectionType +
-                        '://' +
-                        server?.hostName +
-                        ':' +
-                        server?.port
-                      }
-                      key={i}
-                    />
-                  </ListItemButton>
-                )
-              )}
-            </List>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button autoFocus onClick={handleCloseArrrLightwallet}>
-            {t('core:action.close', {
-              postProcess: 'capitalizeFirstChar',
-            })}
-          </Button>
-        </DialogActions>
-      </LightwalletDialog>
-    );
-  };
-
-  const ArrrServerChangeDialogPage = () => {
-    return (
-      <LightwalletDialog
-        onClose={handleCloseArrrServerChange}
-        aria-labelledby="arrr-electrum-servers"
-        open={openArrrServerChange}
-        keepMounted={false}
-      >
-        <DialogTitle
-          sx={{ m: 0, p: 2, fontSize: '14px' }}
-          id="arrr-electrum-servers"
-        >
-          {t('core:message.generic.pirate_chain_servers', {
-            postProcess: 'capitalizeFirstChar',
-          })}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Box
-            sx={{
-              width: '100%',
-              maxWidth: 500,
-              position: 'relative',
-              overflow: 'auto',
-              maxHeight: 400,
-            }}
-          >
-            <List>
-              {allLightwalletServersArrr.map(
-                (
-                  server: {
-                    connectionType: string;
-                    hostName: string;
-                    port: number;
-                  },
-                  i: Key
-                ) => (
-                  <ListItemButton
-                    key={i}
-                    onClick={() => {
-                      setNewArrrServer(
-                        server?.connectionType,
-                        server?.hostName,
-                        server?.port
-                      );
-                    }}
-                  >
-                    <ListItemText
-                      primary={
-                        server?.connectionType +
-                        '://' +
-                        server?.hostName +
-                        ':' +
-                        server?.port
-                      }
-                      key={i}
-                    />
-                  </ListItemButton>
-                )
-              )}
-            </List>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button autoFocus onClick={handleCloseArrrServerChange}>
-            {t('core:action.close', {
-              postProcess: 'capitalizeFirstChar',
-            })}
-          </Button>
-        </DialogActions>
-      </LightwalletDialog>
-    );
   };
 
   const ArrrTableLoader = () => {
@@ -849,7 +709,9 @@ export default function PirateWallet() {
                         style={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          color: input.addressInWallet ? undefined : 'grey',
+                          color: input.addressInWallet
+                            ? undefined
+                            : theme.palette.info.main,
                         }}
                       >
                         <span style={{ flex: 1, textAlign: 'left' }}>
@@ -868,7 +730,9 @@ export default function PirateWallet() {
                         style={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          color: output.addressInWallet ? undefined : 'grey',
+                          color: output.addressInWallet
+                            ? undefined
+                            : theme.palette.info.main,
                         }}
                       >
                         <span style={{ flex: 1, textAlign: 'left' }}>
@@ -897,8 +761,8 @@ export default function PirateWallet() {
                         aria-label="copy"
                         size="small"
                         onClick={() => {
-                          (navigator.clipboard.writeText(row?.txHash),
-                            changeCopyArrrTxHash());
+                            navigator.clipboard.writeText(row?.txHash);
+                            changeCopyArrrTxHash();
                         }}
                       >
                         <CopyAllTwoTone fontSize="small" />
@@ -910,18 +774,18 @@ export default function PirateWallet() {
                   </StyledTableCell>
                   <StyledTableCell style={{ width: 'auto' }} align="left">
                     {row?.totalAmount > 0 ? (
-                      <Box style={{ color: '#66bb6a' }}>
+                      <Box style={{ color: theme.palette.success.main }}>
                         +{(Number(row?.totalAmount) / 1e8).toFixed(8)}
                       </Box>
                     ) : (
-                      <Box style={{ color: '#f44336' }}>
+                      <Box style={{ color: theme.palette.error.main }}>
                         {(Number(row?.totalAmount) / 1e8).toFixed(8)}
                       </Box>
                     )}
                   </StyledTableCell>
                   <StyledTableCell style={{ width: 'auto' }} align="right">
                     {row?.totalAmount <= 0 ? (
-                      <Box style={{ color: '#f44336' }}>
+                      <Box style={{ color: theme.palette.error.main }}>
                         -{(Number(row?.feeAmount) / 1e8).toFixed(8)}
                       </Box>
                     ) : (
@@ -952,7 +816,7 @@ export default function PirateWallet() {
                   postProcess: 'capitalizeFirstChar',
                 })}
                 rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
-                colSpan={5}
+                colSpan={6}
                 count={transactionsArrr.length}
                 rowsPerPage={rowsPerPage}
                 page={page}
@@ -975,9 +839,96 @@ export default function PirateWallet() {
     );
   };
 
-  const ArrrSendDialogPage = () => {
-    return (
-      <Dialog
+  return (
+    <Box sx={{ width: '100%', mt: 2 }}>
+      <DialogGeneral
+        aria-labelledby="arrr-electrum-servers"
+        open={openArrrAddressBook}
+        keepMounted={false}
+      >
+        <DialogContent>
+          <Typography
+            variant="h5"
+            align="center"
+            sx={{ color: 'text.primary', fontWeight: 700 }}
+          >
+            {t('core:message.generic.coming_soon', {
+              postProcess: 'capitalizeFirstChar',
+            })}
+          </Typography>
+        </DialogContent>
+      </DialogGeneral>
+
+      <LightwalletDialog
+        onClose={handleCloseArrrLightwallet}
+        aria-labelledby="arrr-electrum-servers"
+        open={openArrrLightwallet}
+        keepMounted={false}
+      >
+        <DialogTitle
+          sx={{ m: 0, p: 2, fontSize: '14px' }}
+          id="arrr-electrum-servers"
+        >
+          {t('core:message.generic.pirate_chain_servers', {
+            postProcess: 'capitalizeFirstChar',
+          })}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box
+            sx={{
+              width: '100%',
+              maxWidth: 500,
+              position: 'relative',
+              overflow: 'auto',
+              maxHeight: 400,
+            }}
+          >
+            <List>
+              {allLightwalletServersArrr.map(
+                (
+                  server: {
+                    connectionType: string;
+                    hostName: string;
+                    port: number;
+                  },
+                  i: Key
+                ) => (
+                  <ListItemButton
+                    key={i}
+                    onClick={() => {
+                      setNewCurrentArrrServer(
+                        server?.connectionType,
+                        server?.hostName,
+                        server?.port
+                      );
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        server?.connectionType +
+                        '://' +
+                        server?.hostName +
+                        ':' +
+                        server?.port
+                      }
+                      key={i}
+                    />
+                  </ListItemButton>
+                )
+              )}
+            </List>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button autoFocus onClick={handleCloseArrrLightwallet}>
+            {t('core:action.close', {
+              postProcess: 'capitalizeFirstChar',
+            })}
+          </Button>
+        </DialogActions>
+      </LightwalletDialog>
+
+       <Dialog
         fullScreen
         open={openArrrSend}
         onClose={handleCloseArrrSend}
@@ -1101,9 +1052,9 @@ export default function PirateWallet() {
               aria-label="send-arrr"
               onClick={sendArrrRequest}
               sx={{
-                backgroundColor: '#05a2e4',
+                backgroundcolor: 'action.main',
                 color: 'white',
-                '&:hover': { backgroundColor: '#02648d' },
+                '&:hover': { backgroundcolor: 'action.hover' },
               }}
             >
               {t('core:action.send', {
@@ -1189,11 +1140,15 @@ export default function PirateWallet() {
         <Box
           sx={{
             display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginTop: '20px',
             flexDirection: 'column',
-            '& .MuiTextField-root': { width: '50ch' },
+            alignItems: 'stretch',
+            justifyContent: 'center',
+            gap: 2,
+            mt: 2.5,
+            mx: 'auto',
+            width: '100%',
+            maxWidth: 420,
+            px: { xs: 2, sm: 1 },
           }}
         >
           <NumericFormat
@@ -1203,8 +1158,8 @@ export default function PirateWallet() {
             allowNegative={false}
             customInput={TextField}
             valueIsNumericString
-            variant="outlined"
-            label="Amount (ARRR)"
+            {...({ label: 'Amount (ARRR)' } as any)}
+            fullWidth
             isAllowed={(values) => {
               const maxArrrCoin = walletBalanceArrr - 0.0001;
               const { formattedValue, floatValue } = values;
@@ -1216,6 +1171,11 @@ export default function PirateWallet() {
             onValueChange={(values) => {
               setArrrAmount(values.floatValue ?? 0);
             }}
+            slotProps={{
+              input: {
+                variant: 'outlined',
+              },
+            }}
             required
           />
           <TextField
@@ -1226,11 +1186,13 @@ export default function PirateWallet() {
             id="arrr-address"
             margin="normal"
             value={arrrRecipient}
+            onChange={handleRecipientChange}
+            error={addressFormatError}
+            fullWidth
             helperText={t('core:message.generic.pirate_chain_address', {
               postProcess: 'capitalizeFirstChar',
             })}
             slotProps={{ htmlInput: { maxLength: 78, minLength: 78 } }}
-            onChange={handleRecipientChange}
           />
           <TextField
             label={t('core:memo', {
@@ -1239,11 +1201,12 @@ export default function PirateWallet() {
             id="arrr-memo"
             margin="normal"
             value={arrrMemo}
+            fullWidth
             helperText={t('core:message.generic.pirate_chain_max_chars', {
               postProcess: 'capitalizeFirstChar',
             })}
             slotProps={{ htmlInput: { maxLength: 40, minLength: 40 } }}
-            onChange={(e) => setArrrMemo(e.target.value)}
+            onChange={(e: any) => setArrrMemo(e.target.value)}
           />
         </Box>
         <Box
@@ -1259,44 +1222,82 @@ export default function PirateWallet() {
             sx={{ fontWeight: 600, fontSize: '14px', marginTop: '15px' }}
           >
             {t('core:message.generic.sending_fee', {
-              quantity: 0.0001,
+              quantity: ARRR_FEE,
               coin: Coin.ARRR,
               postProcess: 'capitalizeFirstChar',
             })}
           </Typography>
         </Box>
       </Dialog>
-    );
-  };
 
-  const ArrrAddressBookDialogPage = () => {
-    return (
-      <DialogGeneral
+      <LightwalletDialog
+        onClose={handleCloseArrrServerChange}
         aria-labelledby="arrr-electrum-servers"
-        open={openArrrAddressBook}
+        open={openArrrServerChange}
         keepMounted={false}
       >
-        <DialogContent>
-          <Typography
-            variant="h5"
-            align="center"
-            sx={{ color: 'text.primary', fontWeight: 700 }}
+        <DialogTitle
+          sx={{ m: 0, p: 2, fontSize: '14px' }}
+          id="arrr-electrum-servers"
+        >
+          {t('core:message.generic.pirate_chain_servers', {
+            postProcess: 'capitalizeFirstChar',
+          })}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box
+            sx={{
+              width: '100%',
+              maxWidth: 500,
+              position: 'relative',
+              overflow: 'auto',
+              maxHeight: 400,
+            }}
           >
-            {t('core:message.generic.coming_soon', {
+            <List>
+              {allLightwalletServersArrr.map(
+                (
+                  server: {
+                    connectionType: string;
+                    hostName: string;
+                    port: number;
+                  },
+                  i: Key
+                ) => (
+                  <ListItemButton
+                    key={i}
+                    onClick={() => {
+                      setNewArrrServer(
+                        server?.connectionType,
+                        server?.hostName,
+                        server?.port
+                      );
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        server?.connectionType +
+                        '://' +
+                        server?.hostName +
+                        ':' +
+                        server?.port
+                      }
+                      key={i}
+                    />
+                  </ListItemButton>
+                )
+              )}
+            </List>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button autoFocus onClick={handleCloseArrrServerChange}>
+            {t('core:action.close', {
               postProcess: 'capitalizeFirstChar',
             })}
-          </Typography>
-        </DialogContent>
-      </DialogGeneral>
-    );
-  };
-
-  return (
-    <Box sx={{ width: '100%', mt: 2 }}>
-      {ArrrAddressBookDialogPage()}
-      {ArrrLightwalletDialogPage()}
-      {ArrrSendDialogPage()}
-      {ArrrServerChangeDialogPage()}
+          </Button>
+        </DialogActions>
+      </LightwalletDialog>
 
       <WalletCard sx={{ p: { xs: 2, md: 3 }, width: '100%' }}>
         <Grid container rowSpacing={{ xs: 2, md: 3 }} columnSpacing={2}>
@@ -1353,7 +1354,7 @@ export default function PirateWallet() {
                     xs: '1fr',
                     md: 'minmax(0, 1fr) minmax(0, 0.6fr)',
                   },
-                  gridTemplateRows: { xs: 'repeat(3, auto)', md: '1fr 1fr' },
+                  gridTemplateRows: { xs: 'repeat(4, auto)', md: '1fr 1fr' },
                 }}
               >
                 <Grid
@@ -1391,11 +1392,7 @@ export default function PirateWallet() {
                     p: { xs: 1.5, md: 2 },
                   }}
                 >
-                  <Box
-                    display={'flex'}
-                    alignItems={'center'}
-                    gap={1}
-                  >
+                  <Box display={'flex'} alignItems={'center'} gap={1}>
                     <Typography
                       variant="subtitle1"
                       sx={{ color: 'primary.main', fontWeight: 700 }}
@@ -1422,16 +1419,24 @@ export default function PirateWallet() {
                     >
                       {walletInfoArrr?.address}
                     </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={() =>
-                        navigator.clipboard.writeText(
-                          walletInfoArrr?.address ?? EMPTY_STRING
-                        )
-                      }
+
+                    <CustomWidthTooltip
+                      placement="top"
+                      title={t('core:action.copy_address', {
+                        postProcess: 'capitalizeFirstChar',
+                      })}
                     >
-                      <CopyAllTwoTone fontSize="small" />
-                    </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          navigator.clipboard.writeText(
+                            walletInfoArrr?.address ?? EMPTY_STRING
+                          )
+                        }
+                      >
+                        <CopyAllTwoTone fontSize="small" />
+                      </IconButton>
+                    </CustomWidthTooltip>
                   </Box>
                 </Grid>
 
@@ -1442,11 +1447,7 @@ export default function PirateWallet() {
                     p: { xs: 1.5, md: 2 },
                   }}
                 >
-                  <Box
-                    display={'flex'}
-                    alignItems={'center'}
-                    gap={1}
-                  >
+                  <Box display={'flex'} alignItems={'center'} gap={1}>
                     <Typography
                       variant="subtitle1"
                       align="center"
@@ -1495,8 +1496,8 @@ export default function PirateWallet() {
                   justifyContent={'center'}
                   sx={{
                     gridColumn: { xs: '1', md: '2' },
-                    gridRow: { xs: '3', md: '1 / span 2' },
-                    p: { xs: 7, md: 2 },
+                    gridRow: { xs: '4', md: '1 / span 2' },
+                    p: { xs: 1.5, md: 2 },
                   }}
                 >
                   <Box
@@ -1504,9 +1505,9 @@ export default function PirateWallet() {
                       alignItems: 'center',
                       aspectRatio: '1 / 1',
                       bgcolor: '#fff',
-                      border: (t) => `1px solid ${t.palette.divider}`,
+                      border: (t: any) => `1px solid ${t.palette.divider}`,
                       borderRadius: 1,
-                      boxShadow: (t) => t.shadows[2],
+                      boxShadow: (t: any) => t.shadows[2],
                       display: 'flex',
                       height: '100%',
                       justifyContent: 'center',

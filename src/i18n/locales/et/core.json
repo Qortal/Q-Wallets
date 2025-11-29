@@ -7,7 +7,7 @@
     "change_server": "Vaheta serverit",
     "close": "Sulge",
     "copy_address": "Kopeeri aadress",
-    "copy hash": "Kopeeri räsi: {{ hash }}",
+    "copy_hash": "Kopeeri räsi: {{ hash }}",
     "force_sync": "Sunni sünkroonimist",
     "refresh": "Värskenda",
     "remove": "Eemalda",
@@ -79,6 +79,7 @@
       "sending_fee": "Praegune saatmistasu on {{ quantity }} {{ coin }}.",
       "sent_transaction": "Saadetud {{ coin }} tehing oli edukas.",
       "unconfirmed_translaction": "Kinnitamata",
+      "validating": "Valideerimine...",
       "waiting_confirmation": "Ootab kinnitust..."
     },
     "group_actions": {
@@ -95,6 +96,8 @@
       "update_group": "uus kirjeldus: {{ newDescription }} ID: {{ id }}"
     },
     "error": {
+      "amount_exceeds_balance": "Maksimaalne lubatud: {{ maxAmount }}",
+      "amount_positive": "Summa peab olema suurem kui 0",
       "bitcoin_address_invalid": "Kehtetu BTC-aadress",
       "digibyte_address_invalid": "Kehtetu DGB-aadress",
       "doge_address_invalid": "Kehtetu DOGE-aadress",
@@ -104,6 +107,10 @@
       "pirate_chain_gateway": "Pirate Chaini rahakotti ei saa kasutada avaliku sõlme kaudu. Palun kasuta oma kohalikku sõlme.",
       "pirate_chain_no_server": "Ühendust Pirate Chaini Lightwalleti serveriga ei ole.",
       "ravencoin_address_invalid": "Kehtetu RVN-aadress",
+      "recipient_lookup_failed": "Otsing ebaõnnestus",
+      "recipient_not_found": "Saajat ei leitud",
+      "recipient_required": "Saaja on kohustuslik",
+      "recipient_too_short": "Saaja aadress on liiga lühike",
       "something_went_wrong": "Midagi läks valesti. Palun proovi uuesti."
     }
   },

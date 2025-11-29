@@ -51,6 +51,7 @@ import coinLogoLTC from '../../assets/ltc.png';
 import { useTranslation } from 'react-i18next';
 import {
   EMPTY_STRING,
+  LTC_FEE,
   TIME_MINUTES_3,
   TIME_MINUTES_5,
   TIME_SECONDS_2,
@@ -151,11 +152,10 @@ function TablePaginationActions(props: TablePaginationActionsProps) {
 
 export default function LitecoinWallet() {
   const { t } = useTranslation(['core']);
+  const theme = useTheme();
 
   const [walletInfoLtc, setWalletInfoLtc] = useState<any>({});
-  const [_isLoadingWalletInfoLtc, setIsLoadingWalletInfoLtc] =
-    useState<boolean>(false);
-  const [walletBalanceLtc, setWalletBalanceLtc] = useState<any>(null);
+  const [walletBalanceLtc, setWalletBalanceLtc] = useState<any>(0);
   const [isLoadingWalletBalanceLtc, setIsLoadingWalletBalanceLtc] =
     useState<boolean>(true);
   const [transactionsLtc, setTransactionsLtc] = useState<any>([]);
@@ -180,7 +180,7 @@ export default function LitecoinWallet() {
   );
 
   const ltcFeeCalculated = +(+inputFee / 1000 / 1e8).toFixed(8);
-  const estimatedFeeCalculated = +ltcFeeCalculated * 1000;
+  const estimatedFeeCalculated = +ltcFeeCalculated * LTC_FEE;
 
   const emptyRows =
     page > 0
@@ -196,24 +196,20 @@ export default function LitecoinWallet() {
   const handleOpenLtcSend = () => {
     setLtcAmount(0);
     setLtcRecipient(EMPTY_STRING);
-
     setOpenLtcSend(true);
+    setAddressFormatError(false);
+    setOpenSendLtcError(false);
+    setWalletInfoError(null);
+    setWalletBalanceError(null);
   };
 
-  const disableCanSendLtc = () => {
-    if (ltcAmount <= 0 || null || !ltcAmount) {
-      return true;
-    }
-    if (addressFormatError || EMPTY_STRING) {
-      return true;
-    }
-    return false;
-  };
+  const disableCanSendLtc = () =>
+    ltcAmount <= 0 || ltcRecipient === EMPTY_STRING || addressFormatError;
 
   const handleRecipientChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const value = e.target.value;
+    const value: string = e.target.value.trim();
     const pattern =
       /^(L[1-9A-HJ-NP-Za-km-z]{33}|M[1-9A-HJ-NP-Za-km-z]{33}|ltc1[2-9A-HJ-NP-Za-z]{39})$/;
 
@@ -229,6 +225,10 @@ export default function LitecoinWallet() {
   const handleCloseLtcSend = () => {
     setLtcAmount(0);
     setOpenLtcSend(false);
+    setAddressFormatError(false);
+    setOpenSendLtcError(false);
+    setWalletInfoError(null);
+    setWalletBalanceError(null);
   };
 
   const changeCopyLtcTxHash = async () => {
@@ -272,7 +272,6 @@ export default function LitecoinWallet() {
   };
 
   const getWalletInfoLtc = async () => {
-    setIsLoadingWalletInfoLtc(true);
     try {
       setWalletInfoError(null);
       const response = await qortalRequest({
@@ -298,37 +297,37 @@ export default function LitecoinWallet() {
         error?.message ? String(error.message) : String(error)
       );
       console.error('ERROR GET LTC WALLET INFO', error);
-    } finally {
-      setIsLoadingWalletInfoLtc(false);
     }
   };
 
- 
+  const getWalletBalanceLtc = async () => {
+    try {
+      setIsLoadingWalletBalanceLtc(true);
 
-  function computeBalanceFromTransactions(txs: any[]): number {
-    if (!Array.isArray(txs)) return 0;
-    let satoshis = 0;
-    for (const tx of txs) {
-      // Only count confirmed txs (those with a timestamp)
-      if (!tx?.timestamp) continue;
-      const inSat = (tx?.inputs || [])
-        .filter((i: any) => i?.addressInWallet)
-        .reduce((acc: number, cur: any) => acc + Number(cur?.amount || 0), 0);
-      const outSat = (tx?.outputs || [])
-        .filter((o: any) => o?.addressInWallet)
-        .reduce((acc: number, cur: any) => acc + Number(cur?.amount || 0), 0);
-      satoshis += outSat - inSat; // net effect on wallet
+      const response = await qortalRequestWithTimeout(
+        {
+          action: 'GET_WALLET_BALANCE',
+          coin: Coin.LTC,
+        },
+        TIME_MINUTES_5
+      );
+      if (!response?.error) {
+        setWalletBalanceLtc(response);
+      }
+    } catch (error: any) {
+      setWalletBalanceLtc(null);
+      setWalletBalanceError(
+        error?.message ? String(error.message) : String(error)
+      );
+      console.error('ERROR GET LTC BALANCE', error);
+    } finally {
+      setIsLoadingWalletBalanceLtc(false);
     }
-    return +(satoshis / 1e8).toFixed(8);
-  }
-
-
+  };
 
   const getTransactionsLtc = async () => {
     try {
       setIsLoadingLtcTransactions(true);
-      setIsLoadingWalletBalanceLtc(true);
-      setWalletBalanceError(null);
 
       const responseLtcTransactions = await qortalRequestWithTimeout(
         {
@@ -340,41 +339,27 @@ export default function LitecoinWallet() {
 
       if (responseLtcTransactions?.error) {
         setTransactionsLtc([]);
-        setWalletBalanceLtc(null);
-        setWalletBalanceError(
-          typeof responseLtcTransactions.error === 'string'
-            ? responseLtcTransactions.error
-            : t('core:message.error.loading_balance', {
-                postProcess: 'capitalizeFirstChar',
-              })
-        );
       } else {
         setTransactionsLtc(responseLtcTransactions);
-        const computed = computeBalanceFromTransactions(
-          responseLtcTransactions || []
-        );
-        setWalletBalanceLtc(computed);
-        setWalletBalanceError(null);
       }
     } catch (error: any) {
       setTransactionsLtc([]);
-      setWalletBalanceLtc(null);
-      setWalletBalanceError(
-        error?.message ? String(error.message) : String(error)
-      );
       console.error('ERROR GET LTC TRANSACTIONS', error);
     } finally {
       setIsLoadingLtcTransactions(false);
-      setIsLoadingWalletBalanceLtc(false);
     }
   };
 
   useEffect(() => {
     let intervalId: any;
     (async () => {
-      await getWalletInfoLtc();
-      await getTransactionsLtc();
+      await Promise.all([
+        getWalletInfoLtc(),
+        getWalletBalanceLtc(),
+        getTransactionsLtc(),
+      ]);
       intervalId = setInterval(() => {
+        getWalletBalanceLtc();
         getTransactionsLtc();
       }, TIME_MINUTES_3);
     })();
@@ -413,7 +398,6 @@ export default function LitecoinWallet() {
       if (!sendRequest?.error) {
         setLtcAmount(0);
         setLtcRecipient(EMPTY_STRING);
-
         setOpenTxLtcSubmit(false);
         setOpenSendLtcSuccess(true);
         setIsLoadingWalletBalanceLtc(true);
@@ -423,7 +407,6 @@ export default function LitecoinWallet() {
     } catch (error) {
       setLtcAmount(0);
       setLtcRecipient(EMPTY_STRING);
-
       setOpenTxLtcSubmit(false);
       setOpenSendLtcError(true);
       setIsLoadingWalletBalanceLtc(true);
@@ -433,8 +416,259 @@ export default function LitecoinWallet() {
     }
   };
 
-  const LtcSendDialogPage = () => {
+  const tableLoader = () => {
     return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <Box
+          style={{
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <CircularProgress />
+        </Box>
+        <Box
+          style={{
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            marginTop: '20px',
+          }}
+        >
+          <Typography
+            variant="h5"
+            sx={{ color: 'primary.main', fontStyle: 'italic', fontWeight: 700 }}
+          >
+            {t('core:message.generic.loading_transactions', {
+              postProcess: 'capitalizeFirstChar',
+            })}
+          </Typography>
+        </Box>
+      </Box>
+    );
+  };
+
+  const transactionsTable = () => {
+    return (
+      <TableContainer component={Paper}>
+        <Table
+          stickyHeader
+          sx={{ width: '100%' }}
+          aria-label="transactions table"
+        >
+          <TableHead>
+            <TableRow>
+              <StyledTableCell align="left">
+                {t('core:sender', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:receiver', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:transaction_hash', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:total_amount', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:fee.fee', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:time', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {(rowsPerPage > 0
+              ? transactionsLtc.slice(
+                  page * rowsPerPage,
+                  page * rowsPerPage + rowsPerPage
+                )
+              : transactionsLtc
+            )?.map(
+              (
+                row: {
+                  inputs: {
+                    address: any;
+                    addressInWallet: boolean;
+                    amount: number;
+                  }[];
+                  outputs: {
+                    address: any;
+                    addressInWallet: boolean;
+                    amount: number;
+                  }[];
+                  txHash: string;
+                  totalAmount: any;
+                  feeAmount: any;
+                  timestamp: number;
+                },
+                k: Key
+              ) => (
+                <StyledTableRow key={k}>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    {row.inputs.map((input, index) => (
+                      <Box
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          color: input.addressInWallet
+                            ? undefined
+                            : theme.palette.info.main,
+                        }}
+                      >
+                        <span style={{ flex: 1, textAlign: 'left' }}>
+                          {input.address}
+                        </span>
+                        <span style={{ flex: 1, textAlign: 'right' }}>
+                          {(Number(input.amount) / 1e8).toFixed(8)}
+                        </span>
+                      </Box>
+                    ))}
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    {row.outputs.map((output, index) => (
+                      <Box
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          color: output.addressInWallet
+                            ? undefined
+                            : theme.palette.info.main,
+                        }}
+                      >
+                        <span style={{ flex: 1, textAlign: 'left' }}>
+                          {output.address}
+                        </span>
+                        <span style={{ flex: 1, textAlign: 'right' }}>
+                          {(Number(output.amount) / 1e8).toFixed(8)}
+                        </span>
+                      </Box>
+                    ))}
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    {cropString(row?.txHash)}
+                    <CustomWidthTooltip
+                      placement="top"
+                      title={
+                        copyLtcTxHash
+                          ? copyLtcTxHash
+                          : t('core:action.copy_hash', {
+                              hash: row?.txHash,
+                              postProcess: 'capitalizeFirstChar',
+                            })
+                      }
+                    >
+                      <IconButton
+                        aria-label="copy"
+                        size="small"
+                        onClick={() => {
+                          navigator.clipboard.writeText(row?.txHash);
+                          changeCopyLtcTxHash();
+                        }}
+                      >
+                        <CopyAllTwoTone fontSize="small" />
+                      </IconButton>
+                    </CustomWidthTooltip>
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    {row?.totalAmount > 0 ? (
+                      <Box style={{ color: theme.palette.success.main }}>
+                        +{(Number(row?.totalAmount) / 1e8).toFixed(8)}
+                      </Box>
+                    ) : (
+                      <Box style={{ color: theme.palette.error.main }}>
+                        {(Number(row?.totalAmount) / 1e8).toFixed(8)}
+                      </Box>
+                    )}
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="right">
+                    {row?.totalAmount <= 0 ? (
+                      <Box style={{ color: theme.palette.error.main }}>
+                        -{(Number(row?.feeAmount) / 1e8).toFixed(8)}
+                      </Box>
+                    ) : (
+                      <Box style={{ color: 'grey' }}>
+                        -{(Number(row?.feeAmount) / 1e8).toFixed(8)}
+                      </Box>
+                    )}
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    <CustomWidthTooltip
+                      placement="top"
+                      title={
+                        row?.timestamp
+                          ? new Date(row?.timestamp).toLocaleString()
+                          : t('core:message.generic.waiting_confirmation', {
+                              postProcess: 'capitalizeFirstChar',
+                            })
+                      }
+                    >
+                      <Box>
+                        {row?.timestamp
+                          ? epochToAgo(row?.timestamp)
+                          : t('core:message.generic.unconfirmed_transaction', {
+                              postProcess: 'capitalizeFirstChar',
+                            })}
+                      </Box>
+                    </CustomWidthTooltip>
+                  </StyledTableCell>
+                </StyledTableRow>
+              )
+            )}
+            {emptyRows > 0 && (
+              <TableRow style={{ height: 53 * emptyRows }}>
+                <TableCell colSpan={6} />
+              </TableRow>
+            )}
+          </TableBody>
+          <TableFooter sx={{ width: '100%' }}>
+            <TableRow>
+              <TablePagination
+                labelRowsPerPage={t('core:rows_per_page', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+                rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
+                colSpan={6}
+                count={transactionsLtc.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                slotProps={{
+                  select: {
+                    inputProps: {
+                      'aria-label': 'rows per page',
+                    },
+                    native: true,
+                  },
+                }}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                ActionsComponent={TablePaginationActions}
+              />
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </TableContainer>
+    );
+  };
+
+  return (
+    <Box sx={{ width: '100%', mt: 2 }}>
       <Dialog
         fullScreen
         open={openLtcSend}
@@ -559,9 +793,9 @@ export default function LitecoinWallet() {
               aria-label="send-ltc"
               onClick={sendLtcRequest}
               sx={{
-                backgroundColor: '#05a2e4',
+                backgroundcolor: 'action.main',
                 color: 'white',
-                '&:hover': { backgroundColor: '#02648d' },
+                '&:hover': { backgroundcolor: 'action.hover' },
               }}
             >
               {t('core:action.send', {
@@ -603,7 +837,7 @@ export default function LitecoinWallet() {
             ) : walletBalanceError ? (
               walletBalanceError
             ) : (
-              walletBalanceLtc.toFixed(8) + ' LTC'
+              walletBalanceLtc + ' LTC'
             )}
           </Typography>
         </Box>
@@ -637,7 +871,7 @@ export default function LitecoinWallet() {
               if (newMaxLtcAmount < 0) {
                 return Number(0.0) + ' LTC';
               } else {
-                return newMaxLtcAmount.toFixed(8) + ' LTC';
+                return newMaxLtcAmount + ' LTC';
               }
             })()}
           </Typography>
@@ -657,11 +891,15 @@ export default function LitecoinWallet() {
         <Box
           sx={{
             display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginTop: '20px',
             flexDirection: 'column',
-            '& .MuiTextField-root': { width: '50ch' },
+            alignItems: 'stretch',
+            justifyContent: 'center',
+            gap: 2,
+            mt: 2.5,
+            mx: 'auto',
+            width: '100%',
+            maxWidth: 420,
+            px: { xs: 2, sm: 1 },
           }}
         >
           <NumericFormat
@@ -673,10 +911,14 @@ export default function LitecoinWallet() {
             valueIsNumericString
             variant="outlined"
             label="Amount (LTC)"
+            fullWidth
             isAllowed={(values) => {
               const maxLtcCoin = +walletBalanceLtc - estimatedFeeCalculated;
               const { formattedValue, floatValue } = values;
-              return formattedValue === EMPTY_STRING || (floatValue ?? 0) <= maxLtcCoin;
+              return (
+                formattedValue === EMPTY_STRING ||
+                (floatValue ?? 0) <= maxLtcCoin
+              );
             }}
             onValueChange={(values) => {
               setLtcAmount(values.floatValue ?? 0);
@@ -693,6 +935,7 @@ export default function LitecoinWallet() {
             value={ltcRecipient}
             onChange={handleRecipientChange}
             error={addressFormatError}
+            fullWidth
             helperText={
               addressFormatError
                 ? t('core:message.error.litecoin_address_invalid', {
@@ -706,258 +949,7 @@ export default function LitecoinWallet() {
         </Box>
         <FeeManager coin="LTC" onChange={setInputFee} />
       </Dialog>
-    );
-  };
 
-  const tableLoader = () => {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap' }}>
-        <Box
-          style={{
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          <CircularProgress />
-        </Box>
-        <Box
-          style={{
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            marginTop: '20px',
-          }}
-        >
-          <Typography
-            variant="h5"
-            sx={{ color: 'primary.main', fontStyle: 'italic', fontWeight: 700 }}
-          >
-            {t('core:message.generic.loading_transactions', {
-              postProcess: 'capitalizeFirstChar',
-            })}
-          </Typography>
-        </Box>
-      </Box>
-    );
-  };
-
-  const transactionsTable = () => {
-    return (
-      <TableContainer component={Paper}>
-        <Table
-          stickyHeader
-          sx={{ width: '100%' }}
-          aria-label="transactions table"
-        >
-          <TableHead>
-            <TableRow>
-              <StyledTableCell align="left">
-                {t('core:sender', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:receiver', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:transaction_hash', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:total_amount', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:fee.fee', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:time', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {(rowsPerPage > 0
-              ? transactionsLtc.slice(
-                  page * rowsPerPage,
-                  page * rowsPerPage + rowsPerPage
-                )
-              : transactionsLtc
-            )?.map(
-              (
-                row: {
-                  inputs: {
-                    address: any;
-                    addressInWallet: boolean;
-                    amount: number;
-                  }[];
-                  outputs: {
-                    address: any;
-                    addressInWallet: boolean;
-                    amount: number;
-                  }[];
-                  txHash: string;
-                  totalAmount: any;
-                  feeAmount: any;
-                  timestamp: number;
-                },
-                k: Key
-              ) => (
-                <StyledTableRow key={k}>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    {row.inputs.map((input, index) => (
-                      <Box
-                        key={index}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          color: input.addressInWallet ? undefined : 'grey',
-                        }}
-                      >
-                        <span style={{ flex: 1, textAlign: 'left' }}>
-                          {input.address}
-                        </span>
-                        <span style={{ flex: 1, textAlign: 'right' }}>
-                          {(Number(input.amount) / 1e8).toFixed(8)}
-                        </span>
-                      </Box>
-                    ))}
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    {row.outputs.map((output, index) => (
-                      <Box
-                        key={index}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          color: output.addressInWallet ? undefined : 'grey',
-                        }}
-                      >
-                        <span style={{ flex: 1, textAlign: 'left' }}>
-                          {output.address}
-                        </span>
-                        <span style={{ flex: 1, textAlign: 'right' }}>
-                          {(Number(output.amount) / 1e8).toFixed(8)}
-                        </span>
-                      </Box>
-                    ))}
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    {cropString(row?.txHash)}
-                    <CustomWidthTooltip
-                      placement="top"
-                      title={
-                        copyLtcTxHash
-                          ? copyLtcTxHash
-                          : t('core:action.copy_hash', {
-                              hash: row?.txHash,
-                              postProcess: 'capitalizeFirstChar',
-                            })
-                      }
-                    >
-                      <IconButton
-                        aria-label="copy"
-                        size="small"
-                        onClick={() => {
-                          (navigator.clipboard.writeText(row?.txHash),
-                            changeCopyLtcTxHash());
-                        }}
-                      >
-                        <CopyAllTwoTone fontSize="small" />
-                      </IconButton>
-                    </CustomWidthTooltip>
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    {row?.totalAmount > 0 ? (
-                      <Box style={{ color: '#66bb6a' }}>
-                        +{(Number(row?.totalAmount) / 1e8).toFixed(8)}
-                      </Box>
-                    ) : (
-                      <Box style={{ color: '#f44336' }}>
-                        {(Number(row?.totalAmount) / 1e8).toFixed(8)}
-                      </Box>
-                    )}
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="right">
-                    {row?.totalAmount <= 0 ? (
-                      <Box style={{ color: '#f44336' }}>
-                        -{(Number(row?.feeAmount) / 1e8).toFixed(8)}
-                      </Box>
-                    ) : (
-                      <Box style={{ color: 'grey' }}>
-                        -{(Number(row?.feeAmount) / 1e8).toFixed(8)}
-                      </Box>
-                    )}
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    <CustomWidthTooltip
-                      placement="top"
-                      title={
-                        row?.timestamp
-                          ? new Date(row?.timestamp).toLocaleString()
-                          : t('core:message.generic.waiting_confirmation', {
-                              postProcess: 'capitalizeFirstChar',
-                            })
-                      }
-                    >
-                      <Box>
-                        {row?.timestamp
-                          ? epochToAgo(row?.timestamp)
-                          : t('core:message.generic.unconfirmed_transaction', {
-                              postProcess: 'capitalizeFirstChar',
-                            })}
-                      </Box>
-                    </CustomWidthTooltip>
-                  </StyledTableCell>
-                </StyledTableRow>
-              )
-            )}
-            {emptyRows > 0 && (
-              <TableRow style={{ height: 53 * emptyRows }}>
-                <TableCell colSpan={6} />
-              </TableRow>
-            )}
-          </TableBody>
-          <TableFooter sx={{ width: '100%' }}>
-            <TableRow>
-              <TablePagination
-                labelRowsPerPage={t('core:rows_per_page', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-                rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
-                colSpan={5}
-                count={transactionsLtc.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                slotProps={{
-                  select: {
-                    inputProps: {
-                      'aria-label': 'rows per page',
-                    },
-                    native: true,
-                  },
-                }}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                ActionsComponent={TablePaginationActions}
-              />
-            </TableRow>
-          </TableFooter>
-        </Table>
-      </TableContainer>
-    );
-  };
-
-  const LtcAddressBookDialogPage = () => {
-    return (
       <DialogGeneral
         aria-labelledby="ltc-electrum-servers"
         open={openLtcAddressBook}
@@ -975,13 +967,6 @@ export default function LitecoinWallet() {
           </Typography>
         </DialogContent>
       </DialogGeneral>
-    );
-  };
-
-  return (
-    <Box sx={{ width: '100%', mt: 2 }}>
-      {LtcSendDialogPage()}
-      {LtcAddressBookDialogPage()}
 
       <WalletCard sx={{ p: { xs: 2, md: 3 }, width: '100%' }}>
         <Grid container rowSpacing={{ xs: 2, md: 3 }} columnSpacing={2}>
@@ -1055,9 +1040,9 @@ export default function LitecoinWallet() {
                   <Typography variant="h5" sx={{ fontWeight: 700 }}>
                     {walletBalanceLtc ? (
                       `${walletBalanceLtc} LTC`
-                    ) : (
+                    ) : isLoadingWalletBalanceLtc ? (
                       <LinearProgress />
-                    )}
+                    ) : undefined}
                   </Typography>
                 </Grid>
 
@@ -1095,16 +1080,23 @@ export default function LitecoinWallet() {
                     >
                       {walletInfoLtc?.address}
                     </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={() =>
-                        navigator.clipboard.writeText(
-                          walletInfoLtc?.address ?? EMPTY_STRING
-                        )
-                      }
+                    <CustomWidthTooltip
+                      placement="top"
+                      title={t('core:action.copy_address', {
+                        postProcess: 'capitalizeFirstChar',
+                      })}
                     >
-                      <CopyAllTwoTone fontSize="small" />
-                    </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          navigator.clipboard.writeText(
+                            walletInfoLtc?.address ?? EMPTY_STRING
+                          )
+                        }
+                      >
+                        <CopyAllTwoTone fontSize="small" />
+                      </IconButton>
+                    </CustomWidthTooltip>
                   </Box>
                 </Grid>
 

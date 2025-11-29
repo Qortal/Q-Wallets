@@ -3,6 +3,7 @@ import {
   Key,
   MouseEvent,
   SyntheticEvent,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -73,7 +74,14 @@ import {
   WalletButtons,
   WalletCard,
 } from '../../styles/page-styles';
-import { EMPTY_STRING, QORT_1_UNIT, TIME_MINUTES_1, TIME_SECONDS_2, TIME_SECONDS_3, TIME_SECONDS_4 } from '../../common/constants';
+import {
+  EMPTY_STRING,
+  QORT_1_UNIT,
+  TIME_MINUTES_1,
+  TIME_SECONDS_2,
+  TIME_SECONDS_3,
+  TIME_SECONDS_4,
+} from '../../common/constants';
 import { Coin } from 'qapp-core';
 
 interface TablePaginationActionsProps {
@@ -155,10 +163,16 @@ function TablePaginationActions(props: TablePaginationActionsProps) {
 }
 
 export default function QortalWallet() {
+  const ADDRESS_MIN_LENGTH = 3;
+  const ADDRESS_LOOKUP_DEBOUNCE_MS = 450;
+
   const { t } = useTranslation(['core']);
+  const theme = useTheme();
 
   const { address, nodeInfo } = useContext(WalletContext);
-  const [walletBalanceQort, setWalletBalanceQort] = useState<any>(null);
+  const [walletBalanceQort, setWalletBalanceQort] = useState<any>(0);
+  const [isLoadingWalletBalanceQort, setIsLoadingWalletBalanceQort] =
+    useState<boolean>(true);
   const [paymentInfo, setPaymentInfo] = useState<any>([]);
   const [qortTxFee, setQortTxFee] = useState<number>(0);
   const [arbitraryInfo, setArbitraryInfo] = useState<any>([]);
@@ -178,9 +192,16 @@ export default function QortalWallet() {
   const [openTxQortSubmit, setOpenTxQortSubmit] = useState(false);
   const [openSendQortSuccess, setOpenSendQortSuccess] = useState(false);
   const [openSendQortError, setOpenSendQortError] = useState(false);
-  const [sendDisabled, setSendDisabled] = useState(true);
-  const [qortAmount, setQortAmount] = useState<number>(0);
-  const [qortRecipient, setQortRecipient] = useState(EMPTY_STRING);
+  const [qortAmount, setQortAmount] = useState<number | undefined>(undefined);
+  const [qortRecipient, setQortRecipient] = useState<string>(EMPTY_STRING);
+  const [sendDisabled, setSendDisabled] = useState<boolean>(true);
+  const [amountError, setAmountError] = useState<string | null>(null);
+  const [recipientError, setRecipientError] = useState<string | null>(null);
+  const [addressValidating, setAddressValidating] = useState(false);
+  const [amountTouched, setAmountTouched] = useState(false);
+  const [recipientTouched, setRecipientTouched] = useState(false);
+
+  const maxQortCoin = walletBalanceQort - qortTxFee;
 
   const emptyRowsPayment =
     page > 0 ? Math.max(0, (1 + page) * rowsPerPage - paymentInfo.length) : 0;
@@ -232,12 +253,20 @@ export default function QortalWallet() {
     setQortAmount(0);
     setQortRecipient(EMPTY_STRING);
     setOpenQortSend(true);
+    setAmountError(null);
+    setAmountTouched(false);
+    setRecipientError(null);
+    setRecipientTouched(false);
   };
 
   const handleCloseQortSend = () => {
     setQortAmount(0);
     setQortRecipient(EMPTY_STRING);
     setOpenQortSend(false);
+    setAmountError(null);
+    setAmountTouched(false);
+    setRecipientError(null);
+    setRecipientTouched(false);
   };
 
   const handleCloseSendQortSuccess = (
@@ -271,249 +300,360 @@ export default function QortalWallet() {
     }
   };
 
-  const validateCanSendQortAmount = async (qAmount: number | undefined) => {
-    let checkAmount = 0;
-    if (typeof qAmount === 'number' && !isNaN(qAmount)) {
-      checkAmount = qAmount;
-    }
-    setQortAmount(checkAmount);
-    if (checkAmount <= 0 || !checkAmount) {
-      setSendDisabled(true);
-    } else if (qortRecipient.length < 3 || qortRecipient === EMPTY_STRING) {
-      setSendDisabled(true);
-    } else {
-      setSendDisabled(false);
-    }
-  };
-
-  const validateCanSendQortAddress = async (qRecipient: string) => {
-    let checkRecipient = EMPTY_STRING;
-    checkRecipient = qRecipient;
-    setQortRecipient(checkRecipient);
-    if (qortAmount <= 0 || null || !qortAmount) {
-      setSendDisabled(true);
-    } else if (qRecipient.length < 3 || qRecipient === EMPTY_STRING) {
-      setSendDisabled(true);
-    } else if (qRecipient.length >= 3) {
-      const addressUrl = `/addresses/${checkRecipient}`;
-      const nameUrl = `/names/${checkRecipient}`;
-      const addressUrlResult = await fetch(addressUrl);
-      const addressUrlResponse = await addressUrlResult.json();
-      const nameUrlResult = await fetch(nameUrl);
-      const nameUrlResponse = await nameUrlResult.json();
-      if (!addressUrlResponse?.error) {
-        setSendDisabled(false);
-      } else if (!nameUrlResponse?.error) {
-        setSendDisabled(false);
-      } else {
-        setSendDisabled(true);
+  // core validation (synchronous checks)
+  const validateAmountLocal = useCallback(
+    (amount?: number) => {
+      const a =
+        typeof amount === 'number' && Number.isFinite(amount) ? amount : 0;
+      if (a <= 0) {
+        setAmountError(
+          t('core:message.error.amount_positive', {
+            postProcess: 'capitalizeFirstChar',
+          })
+        );
+        return false;
       }
-    } else {
-      setSendDisabled(false);
+      if (a > maxQortCoin) {
+        setAmountError(
+          t('core:message.error.amount_exceeds_balance', {
+            maxAmount: maxQortCoin,
+            postProcess: 'capitalizeFirstChar',
+          })
+        );
+        return false;
+      }
+      setAmountError(null);
+      return true;
+    },
+    [maxQortCoin, t]
+  );
+
+  // address lookup with debounce + cancel
+  useEffect(() => {
+    // Early exit: if recipient not touched, no validation needed
+    if (!recipientTouched) {
+      setRecipientError(null);
+      setAddressValidating(false);
+      return;
     }
-  };
 
-  const getQortalTransactions = async () => {
-    setLoadingRefreshQort(true);
+    // Synchronous validations
+    if (qortRecipient === EMPTY_STRING) {
+      setRecipientError(t('core:message.error.recipient_required'));
+      setAddressValidating(false);
+      return;
+    }
 
-    const arbitraryLink = `/transactions/search?txType=ARBITRARY&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
-    const assetLink = `/transactions/search?txType=ISSUE_ASSET&txType=TRANSFER_ASSET&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
-    const atLink = `/transactions/search?txType=AT&txType=DEPLOY_AT&txType=MESSAGE&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
-    const groupLink = `/transactions/search?txType=CREATE_GROUP&txType=UPDATE_GROUP&txType=ADD_GROUP_ADMIN&txType=REMOVE_GROUP_ADMIN&txType=GROUP_BAN&txType=CANCEL_GROUP_BAN&txType=GROUP_KICK&txType=GROUP_INVITE&txType=CANCEL_GROUP_INVITE&txType=JOIN_GROUP&txType=LEAVE_GROUP&txType=GROUP_APPROVAL&txType=SET_GROUP&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
-    const nameLink = `/transactions/search?txType=REGISTER_NAME&txType=UPDATE_NAME&txType=SELL_NAME&txType=CANCEL_SELL_NAME&txType=BUY_NAME&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
-    const paymentLink = `/transactions/search?txType=PAYMENT&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
-    const pendingArbitraryLink = `/transactions/unconfirmed?txType=ARBITRARY&creator=${address}&limit=0&reverse=true`;
-    const pendingAssetLink = `/transactions/unconfirmed?txType=ISSUE_ASSET&txType=TRANSFER_ASSET&creator=${address}&limit=0&reverse=true`;
-    const pendingAtLink = `/transactions/unconfirmed?txType=AT&txType=DEPLOY_AT&txType=MESSAGE&creator=${address}&limit=0&reverse=true`;
-    const pendingGroupLink = `/transactions/unconfirmed?txType=CREATE_GROUP&txType=UPDATE_GROUP&txType=ADD_GROUP_ADMIN&txType=REMOVE_GROUP_ADMIN&txType=GROUP_BAN&txType=CANCEL_GROUP_BAN&txType=GROUP_KICK&txType=GROUP_INVITE&txType=CANCEL_GROUP_INVITE&txType=JOIN_GROUP&txType=LEAVE_GROUP&txType=GROUP_APPROVAL&txType=SET_GROUP&creator=${address}&limit=0&reverse=true`;
-    const pendingNameLink = `/transactions/unconfirmed?txType=REGISTER_NAME&txType=UPDATE_NAME&txType=SELL_NAME&txType=CANCEL_SELL_NAME&txType=BUY_NAME&creator=${address}&limit=0&reverse=true`;
-    const pendingPaymentLink = `/transactions/unconfirmed?txType=PAYMENT&creator=${address}&limit=0&reverse=true`;
-    const pendingPollLink = `/transactions/unconfirmed?txType=CREATE_POLL&txType=VOTE_ON_POLL&creator=${address}&limit=0&reverse=true`;
-    const pendingRewardshareLink = `/transactions/unconfirmed?txType=REWARD_SHARE&txType=TRANSFER_PRIVS&txType=PRESENCE&creator=${address}&limit=0&reverse=true`;
-    const pollLink = `/transactions/search?txType=CREATE_POLL&txType=VOTE_ON_POLL&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
-    const rewardshareLink = `/transactions/search?txType=REWARD_SHARE&txType=TRANSFER_PRIVS&txType=PRESENCE&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
+    if (qortRecipient.length < ADDRESS_MIN_LENGTH) {
+      setRecipientError(t('core:message.error.recipient_too_short'));
+      setAddressValidating(false);
+      return;
+    }
 
-    const compareFn = (a: { timestamp: number }, b: { timestamp: number }) => {
-      return b.timestamp - a.timestamp;
-    };
+    // Perform debounced network lookup
+    setAddressValidating(true);
+    setRecipientError(null);
 
-    const toArray = (value: unknown) =>
-      Array.isArray(value) ? value : ([] as any[]);
-
-    const fetchPayment = async () => {
-      const paymentResponse = await fetch(paymentLink);
-      const pendingPaymentResponse = await fetch(pendingPaymentLink);
-      const paymentResult = await paymentResponse.json();
-      const pendingPaymentResult = await pendingPaymentResponse.json();
-      const allPayment = [
-        ...toArray(paymentResult),
-        ...toArray(pendingPaymentResult),
-      ];
-      const allPaymentSorted = allPayment.sort(compareFn);
-      setPaymentInfo(allPaymentSorted);
-      return allPaymentSorted;
-    };
-
-    const fetchArbitrary = async () => {
-      const arbitraryResponse = await fetch(arbitraryLink);
-      const pendingArbitraryResponse = await fetch(pendingArbitraryLink);
-      const arbitraryResult = await arbitraryResponse.json();
-      const pendingArbitraryResult = await pendingArbitraryResponse.json();
-      const allArbitrary = [
-        ...toArray(arbitraryResult),
-        ...toArray(pendingArbitraryResult),
-      ];
-      const allArbitrarySorted = allArbitrary.sort(compareFn);
-      setArbitraryInfo(allArbitrarySorted);
-      return allArbitrarySorted;
-    };
-
-    const fetchAt = async () => {
-      const atResponse = await fetch(atLink);
-      const pendingAtResponse = await fetch(pendingAtLink);
-      const atResult = await atResponse.json();
-      const pendingAtResult = await pendingAtResponse.json();
-      const allAt = [...toArray(atResult), ...toArray(pendingAtResult)];
-      const allAtSorted = allAt.sort(compareFn);
-      setAtInfo(allAtSorted);
-      return allAtSorted;
-    };
-
-    const fetchGroup = async () => {
-      const groupResponse = await fetch(groupLink);
-      const pendingGroupResponse = await fetch(pendingGroupLink);
-      const groupResult = await groupResponse.json();
-      const pendingGroupResult = await pendingGroupResponse.json();
-      const allGroup = [
-        ...toArray(groupResult),
-        ...toArray(pendingGroupResult),
-      ];
-      const allGroupSorted = allGroup.sort(compareFn);
-      setGroupInfo(allGroupSorted);
-      return allGroupSorted;
-    };
-
-    const fetchName = async () => {
-      const nameResponse = await fetch(nameLink);
-      const pendingNameResponse = await fetch(pendingNameLink);
-      const nameResult = await nameResponse.json();
-      const pendingNameResult = await pendingNameResponse.json();
-      const allName = [...toArray(nameResult), ...toArray(pendingNameResult)];
-      const allNameSorted = allName.sort(compareFn);
-      setNameInfo(allNameSorted);
-      return allNameSorted;
-    };
-
-    const fetchAsset = async () => {
-      const assetResponse = await fetch(assetLink);
-      const pendingAssetResponse = await fetch(pendingAssetLink);
-      const assetResult = await assetResponse.json();
-      const pendingAssetResult = await pendingAssetResponse.json();
-      const allAsset = [
-        ...toArray(assetResult),
-        ...toArray(pendingAssetResult),
-      ];
-      const allAssetSorted = allAsset.sort(compareFn);
-      setAssetInfo(allAssetSorted);
-      return allAssetSorted;
-    };
-
-    const fetchPoll = async () => {
-      const pollResponse = await fetch(pollLink);
-      const pendingPollResponse = await fetch(pendingPollLink);
-      const pollResult = await pollResponse.json();
-      const pendingPollResult = await pendingPollResponse.json();
-      const allPoll = [...toArray(pollResult), ...toArray(pendingPollResult)];
-      const allPollSorted = allPoll.sort(compareFn);
-      setPollInfo(allPollSorted);
-      return allPollSorted;
-    };
-
-    const fetchRewardshare = async () => {
-      const rewardshareResponse = await fetch(rewardshareLink);
-      const pendingRewardshareResponse = await fetch(pendingRewardshareLink);
-      const rewardshareResult = await rewardshareResponse.json();
-      const pendingRewardshareResult = await pendingRewardshareResponse.json();
-      const allRewardshare = [
-        ...toArray(rewardshareResult),
-        ...toArray(pendingRewardshareResult),
-      ];
-      const allRewardshareSorted = allRewardshare.sort(compareFn);
-      setRewardshareInfo(allRewardshareSorted);
-      return allRewardshareSorted;
-    };
-
-    try {
-      const [
-        arbitraries,
-        assets,
-        ats,
-        groups,
-        names,
-        payments,
-        polls,
-        rewardshares,
-      ] = await Promise.all([
-        fetchPayment(),
-        fetchArbitrary(),
-        fetchAt(),
-        fetchGroup(),
-        fetchName(),
-        fetchAsset(),
-        fetchPoll(),
-        fetchRewardshare(),
-      ]);
-
-      const combinedTransactions = [
-        arbitraries,
-        assets,
-        ats,
-        groups,
-        names,
-        payments,
-        polls,
-        rewardshares,
-      ].reduce<any[]>((acc, list) => {
-        if (Array.isArray(list)) {
-          acc.push(...list);
+    const controller = new AbortController();
+    const timeout = setTimeout(async () => {
+      try {
+        const [addrRes, nameRes] = await Promise.all([
+          fetch(`/addresses/${encodeURIComponent(qortRecipient)}`, {
+            signal: controller.signal,
+          }).then(async (r) => {
+            if (!r.ok) {
+              console.warn(`Invalid address format: ${qortRecipient}`);
+              return { error: 'Invalid address' };
+            }
+            return r.json();
+          }),
+          fetch(`/names/${encodeURIComponent(qortRecipient)}`, {
+            signal: controller.signal,
+          }).then(async (r) => {
+            if (!r.ok) {
+              console.warn(`No name found: ${qortRecipient}`);
+              return { error: 'Name not found' };
+            }
+            return r.json();
+          }),
+        ]);
+        if (!addrRes?.error || !nameRes?.error) {
+          setRecipientError(null);
+        } else {
+          setRecipientError(t('core:message.error.recipient_not_found'));
         }
-        return acc;
-      }, []);
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+        console.error('Recipient lookup failed:', err.message);
+        setRecipientError(t('core:message.error.recipient_lookup_failed'));
+      } finally {
+        setAddressValidating(false);
+      }
+    }, ADDRESS_LOOKUP_DEBOUNCE_MS);
 
-      setAllInfo(combinedTransactions.sort(compareFn));
-    } catch (error) {
-      console.error('Failed to fetch QORT transactions', error);
-      setAllInfo([]);
-    } finally {
-      setLoadingRefreshQort(false);
-    }
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [qortRecipient, recipientTouched, t]);
+
+  // Consolidated send button enablement - derived from all validation states
+  useEffect(() => {
+    const amountValid = validateAmountLocal(qortAmount);
+    const recipientLocallyValid =
+      !!qortRecipient && qortRecipient.length >= ADDRESS_MIN_LENGTH;
+    const addressFound =
+      !addressValidating &&
+      recipientError === null &&
+      recipientTouched &&
+      recipientLocallyValid;
+
+    const finalEnabled = amountValid && recipientLocallyValid && addressFound;
+    setSendDisabled(!finalEnabled);
+  }, [
+    qortAmount,
+    qortRecipient,
+    addressValidating,
+    recipientError,
+    recipientTouched,
+    validateAmountLocal,
+  ]);
+
+  // input handlers
+  const onAmountChange = (values: { floatValue?: number }) => {
+    const next = values.floatValue ?? 0;
+    setQortAmount(next);
+    // quick local validation
+    validateAmountLocal(next);
   };
+
+  const onAmountBlur = () => setAmountTouched(true);
+  const onRecipientBlur = () => setRecipientTouched(true);
+
+  const getQortalTransactions = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoadingRefreshQort(true);
+
+      const arbitraryLink = `/transactions/search?txType=ARBITRARY&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
+      const assetLink = `/transactions/search?txType=ISSUE_ASSET&txType=TRANSFER_ASSET&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
+      const atLink = `/transactions/search?txType=AT&txType=DEPLOY_AT&txType=MESSAGE&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
+      const groupLink = `/transactions/search?txType=CREATE_GROUP&txType=UPDATE_GROUP&txType=ADD_GROUP_ADMIN&txType=REMOVE_GROUP_ADMIN&txType=GROUP_BAN&txType=CANCEL_GROUP_BAN&txType=GROUP_KICK&txType=GROUP_INVITE&txType=CANCEL_GROUP_INVITE&txType=JOIN_GROUP&txType=LEAVE_GROUP&txType=GROUP_APPROVAL&txType=SET_GROUP&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
+      const nameLink = `/transactions/search?txType=REGISTER_NAME&txType=UPDATE_NAME&txType=SELL_NAME&txType=CANCEL_SELL_NAME&txType=BUY_NAME&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
+      const paymentLink = `/transactions/search?txType=PAYMENT&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
+      const pendingArbitraryLink = `/transactions/unconfirmed?txType=ARBITRARY&creator=${address}&limit=0&reverse=true`;
+      const pendingAssetLink = `/transactions/unconfirmed?txType=ISSUE_ASSET&txType=TRANSFER_ASSET&creator=${address}&limit=0&reverse=true`;
+      const pendingAtLink = `/transactions/unconfirmed?txType=AT&txType=DEPLOY_AT&txType=MESSAGE&creator=${address}&limit=0&reverse=true`;
+      const pendingGroupLink = `/transactions/unconfirmed?txType=CREATE_GROUP&txType=UPDATE_GROUP&txType=ADD_GROUP_ADMIN&txType=REMOVE_GROUP_ADMIN&txType=GROUP_BAN&txType=CANCEL_GROUP_BAN&txType=GROUP_KICK&txType=GROUP_INVITE&txType=CANCEL_GROUP_INVITE&txType=JOIN_GROUP&txType=LEAVE_GROUP&txType=GROUP_APPROVAL&txType=SET_GROUP&creator=${address}&limit=0&reverse=true`;
+      const pendingNameLink = `/transactions/unconfirmed?txType=REGISTER_NAME&txType=UPDATE_NAME&txType=SELL_NAME&txType=CANCEL_SELL_NAME&txType=BUY_NAME&creator=${address}&limit=0&reverse=true`;
+      const pendingPaymentLink = `/transactions/unconfirmed?txType=PAYMENT&creator=${address}&limit=0&reverse=true`;
+      const pendingPollLink = `/transactions/unconfirmed?txType=CREATE_POLL&txType=VOTE_ON_POLL&creator=${address}&limit=0&reverse=true`;
+      const pendingRewardshareLink = `/transactions/unconfirmed?txType=REWARD_SHARE&txType=TRANSFER_PRIVS&txType=PRESENCE&creator=${address}&limit=0&reverse=true`;
+      const pollLink = `/transactions/search?txType=CREATE_POLL&txType=VOTE_ON_POLL&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
+      const rewardshareLink = `/transactions/search?txType=REWARD_SHARE&txType=TRANSFER_PRIVS&txType=PRESENCE&address=${address}&confirmationStatus=CONFIRMED&limit=0&reverse=true`;
+
+      const compareFn = (a: { timestamp: number }, b: { timestamp: number }) => {
+        return b.timestamp - a.timestamp;
+      };
+
+      const toArray = (value: unknown) =>
+        Array.isArray(value) ? value : ([] as any[]);
+
+      const fetchPayment = async () => {
+        const paymentResponse = await fetch(paymentLink, { signal });
+        const pendingPaymentResponse = await fetch(pendingPaymentLink, {
+          signal,
+        });
+        const paymentResult = await paymentResponse.json();
+        const pendingPaymentResult = await pendingPaymentResponse.json();
+        const allPayment = [
+          ...toArray(paymentResult),
+          ...toArray(pendingPaymentResult),
+        ];
+        const allPaymentSorted = allPayment.sort(compareFn);
+        setPaymentInfo(allPaymentSorted);
+        return allPaymentSorted;
+      };
+
+      const fetchArbitrary = async () => {
+        const arbitraryResponse = await fetch(arbitraryLink, { signal });
+        const pendingArbitraryResponse = await fetch(pendingArbitraryLink, {
+          signal,
+        });
+        const arbitraryResult = await arbitraryResponse.json();
+        const pendingArbitraryResult = await pendingArbitraryResponse.json();
+        const allArbitrary = [
+          ...toArray(arbitraryResult),
+          ...toArray(pendingArbitraryResult),
+        ];
+        const allArbitrarySorted = allArbitrary.sort(compareFn);
+        setArbitraryInfo(allArbitrarySorted);
+        return allArbitrarySorted;
+      };
+
+      const fetchAt = async () => {
+        const atResponse = await fetch(atLink, { signal });
+        const pendingAtResponse = await fetch(pendingAtLink, { signal });
+        const atResult = await atResponse.json();
+        const pendingAtResult = await pendingAtResponse.json();
+        const allAt = [...toArray(atResult), ...toArray(pendingAtResult)];
+        const allAtSorted = allAt.sort(compareFn);
+        setAtInfo(allAtSorted);
+        return allAtSorted;
+      };
+
+      const fetchGroup = async () => {
+        const groupResponse = await fetch(groupLink, { signal });
+        const pendingGroupResponse = await fetch(pendingGroupLink, { signal });
+        const groupResult = await groupResponse.json();
+        const pendingGroupResult = await pendingGroupResponse.json();
+        const allGroup = [
+          ...toArray(groupResult),
+          ...toArray(pendingGroupResult),
+        ];
+        const allGroupSorted = allGroup.sort(compareFn);
+        setGroupInfo(allGroupSorted);
+        return allGroupSorted;
+      };
+
+      const fetchName = async () => {
+        const nameResponse = await fetch(nameLink, { signal });
+        const pendingNameResponse = await fetch(pendingNameLink, { signal });
+        const nameResult = await nameResponse.json();
+        const pendingNameResult = await pendingNameResponse.json();
+        const allName = [...toArray(nameResult), ...toArray(pendingNameResult)];
+        const allNameSorted = allName.sort(compareFn);
+        setNameInfo(allNameSorted);
+        return allNameSorted;
+      };
+
+      const fetchAsset = async () => {
+        const assetResponse = await fetch(assetLink, { signal });
+        const pendingAssetResponse = await fetch(pendingAssetLink, { signal });
+        const assetResult = await assetResponse.json();
+        const pendingAssetResult = await pendingAssetResponse.json();
+        const allAsset = [
+          ...toArray(assetResult),
+          ...toArray(pendingAssetResult),
+        ];
+        const allAssetSorted = allAsset.sort(compareFn);
+        setAssetInfo(allAssetSorted);
+        return allAssetSorted;
+      };
+
+      const fetchPoll = async () => {
+        const pollResponse = await fetch(pollLink, { signal });
+        const pendingPollResponse = await fetch(pendingPollLink, { signal });
+        const pollResult = await pollResponse.json();
+        const pendingPollResult = await pendingPollResponse.json();
+        const allPoll = [...toArray(pollResult), ...toArray(pendingPollResult)];
+        const allPollSorted = allPoll.sort(compareFn);
+        setPollInfo(allPollSorted);
+        return allPollSorted;
+      };
+
+      const fetchRewardshare = async () => {
+        const rewardshareResponse = await fetch(rewardshareLink, { signal });
+        const pendingRewardshareResponse = await fetch(
+          pendingRewardshareLink,
+          { signal }
+        );
+        const rewardshareResult = await rewardshareResponse.json();
+        const pendingRewardshareResult =
+          await pendingRewardshareResponse.json();
+        const allRewardshare = [
+          ...toArray(rewardshareResult),
+          ...toArray(pendingRewardshareResult),
+        ];
+        const allRewardshareSorted = allRewardshare.sort(compareFn);
+        setRewardshareInfo(allRewardshareSorted);
+        return allRewardshareSorted;
+      };
+
+      try {
+        const [
+          arbitraries,
+          assets,
+          ats,
+          groups,
+          names,
+          payments,
+          polls,
+          rewardshares,
+        ] = await Promise.all([
+          fetchPayment(),
+          fetchArbitrary(),
+          fetchAt(),
+          fetchGroup(),
+          fetchName(),
+          fetchAsset(),
+          fetchPoll(),
+          fetchRewardshare(),
+        ]);
+
+        const combinedTransactions = [
+          arbitraries,
+          assets,
+          ats,
+          groups,
+          names,
+          payments,
+          polls,
+          rewardshares,
+        ].reduce<any[]>((acc, list) => {
+          if (Array.isArray(list)) {
+            acc.push(...list);
+          }
+          return acc;
+        }, []);
+
+        setAllInfo(combinedTransactions.sort(compareFn));
+      } catch (error: any) {
+        if (error.name === 'AbortError') return;
+        console.error('Failed to fetch QORT transactions', error);
+        setAllInfo([]);
+      } finally {
+        setLoadingRefreshQort(false);
+      }
+    },
+    [address]
+  );
 
   const handleLoadingRefreshQort = async () => {
     await getQortalTransactions();
   };
 
-  const getWalletBalanceQort = async () => {
-    try {
-      const balanceLink = `/addresses/balance/${address}`;
-      const response = await fetch(balanceLink);
-      const data = await response.json();
-      setWalletBalanceQort(data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  const getWalletBalanceQort = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        setIsLoadingWalletBalanceQort(true);
+        const balanceLink = `/addresses/balance/${address}`;
+        const response = await fetch(balanceLink, { signal });
+        const data = await response.json();
+        setWalletBalanceQort(data);
+      } catch (error: any) {
+        if (error.name === 'AbortError') return;
+        console.error(error);
+      } finally {
+        setIsLoadingWalletBalanceQort(false);
+      }
+    },
+    [address]
+  );
 
   useEffect(() => {
     if (!address) return;
+
+    const controller = new AbortController();
     const intervalGetWalletBalance = setInterval(() => {
       getWalletBalanceQort();
     }, TIME_MINUTES_1);
-    getWalletBalanceQort();
+    getWalletBalanceQort(controller.signal);
+
     return () => {
       clearInterval(intervalGetWalletBalance);
+      controller.abort();
     };
-  }, [address]);
+  }, [address, getWalletBalanceQort]);
 
   useEffect(() => {
     let cancelled = false;
@@ -539,8 +679,14 @@ export default function QortalWallet() {
 
   useEffect(() => {
     if (!address) return;
-    getQortalTransactions();
-  }, [address]);
+
+    const controller = new AbortController();
+    getQortalTransactions(controller.signal);
+
+    return () => {
+      controller.abort();
+    };
+  }, [address, getQortalTransactions]);
 
   const sendQortRequest = async () => {
     setOpenTxQortSubmit(true);
@@ -552,10 +698,16 @@ export default function QortalWallet() {
         amount: qortAmount,
       });
       if (!sendRequest?.error) {
+        setAmountError(null);
+        setAmountTouched(false);
+        setRecipientError(null);
+        setRecipientTouched(false);
+
         setQortAmount(0);
         setQortRecipient(EMPTY_STRING);
         setOpenTxQortSubmit(false);
         setOpenSendQortSuccess(true);
+
         await timeoutDelay(TIME_SECONDS_3);
         getWalletBalanceQort();
         getQortalTransactions();
@@ -570,28 +722,6 @@ export default function QortalWallet() {
       getQortalTransactions();
       console.error('ERROR SENDING QORT', error);
     }
-  };
-
-  const QortAddressBookDialogPage = () => {
-    return (
-      <DialogGeneral
-        aria-labelledby="qort-electrum-servers"
-        open={openQortAddressBook}
-        keepMounted={false}
-      >
-        <DialogContent>
-          <Typography
-            variant="h5"
-            align="center"
-            sx={{ color: 'text.primary', fontWeight: 700 }}
-          >
-            {t('core:message.generic.coming_soon', {
-              postProcess: 'capitalizeFirstChar',
-            })}
-          </Typography>
-        </DialogContent>
-      </DialogGeneral>
-    );
   };
 
   const tablePayment = () => {
@@ -688,7 +818,7 @@ export default function QortalWallet() {
                                 <HistoryToggleOff
                                   style={{
                                     fontSize: '15px',
-                                    color: '#f44336',
+                                    color: theme.palette.error.main,
                                     marginTop: '2px',
                                   }}
                                 />
@@ -708,7 +838,7 @@ export default function QortalWallet() {
                                 <CheckCircleOutline
                                   style={{
                                     fontSize: '15px',
-                                    color: '#66bb6a',
+                                    color: theme.palette.success.main,
                                     marginTop: '2px',
                                   }}
                                 />
@@ -722,7 +852,7 @@ export default function QortalWallet() {
                       </StyledTableCell>
                       <StyledTableCell style={{ width: 'auto' }} align="left">
                         {row?.creatorAddress === address ? (
-                          <Box style={{ color: '#05a2e4' }}>
+                          <Box style={{ color: theme.palette.info.main }}>
                             {row?.creatorAddress}
                           </Box>
                         ) : (
@@ -731,7 +861,7 @@ export default function QortalWallet() {
                       </StyledTableCell>
                       <StyledTableCell style={{ width: 'auto' }} align="left">
                         {row?.recipient === address ? (
-                          <Box style={{ color: '#05a2e4' }}>
+                          <Box style={{ color: theme.palette.info.main }}>
                             {row?.recipient}
                           </Box>
                         ) : (
@@ -740,11 +870,11 @@ export default function QortalWallet() {
                       </StyledTableCell>
                       <StyledTableCell style={{ width: 'auto' }} align="left">
                         {row?.recipient === address ? (
-                          <Box style={{ color: '#66bb6a' }}>
+                          <Box style={{ color: theme.palette.success.main }}>
                             + {row?.amount}
                           </Box>
                         ) : (
-                          <Box style={{ color: '#f44336' }}>
+                          <Box style={{ color: theme.palette.error.main }}>
                             - {row?.amount}
                           </Box>
                         )}
@@ -890,7 +1020,7 @@ export default function QortalWallet() {
                               <HistoryToggleOff
                                 style={{
                                   fontSize: '15px',
-                                  color: '#f44336',
+                                  color: theme.palette.error.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -908,7 +1038,7 @@ export default function QortalWallet() {
                               <CheckCircleOutline
                                 style={{
                                   fontSize: '15px',
-                                  color: '#66bb6a',
+                                  color: theme.palette.success.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -922,7 +1052,7 @@ export default function QortalWallet() {
                     </StyledTableCell>
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       {row?.creatorAddress === address ? (
-                        <Box style={{ color: '#05a2e4' }}>
+                        <Box style={{ color: theme.palette.info.main }}>
                           {row?.creatorAddress}
                         </Box>
                       ) : (
@@ -933,7 +1063,7 @@ export default function QortalWallet() {
                       {row?.identifier}
                     </StyledTableCell>
                     <StyledTableCell style={{ width: 'auto' }} align="left">
-                      <Box style={{ color: '#66bb6a' }}>
+                      <Box style={{ color: theme.palette.success.main }}>
                         {humanFileSize(row?.size, true, 2)}
                       </Box>
                     </StyledTableCell>
@@ -1086,7 +1216,7 @@ export default function QortalWallet() {
                               <HistoryToggleOff
                                 style={{
                                   fontSize: '15px',
-                                  color: '#f44336',
+                                  color: theme.palette.error.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -1104,7 +1234,7 @@ export default function QortalWallet() {
                               <CheckCircleOutline
                                 style={{
                                   fontSize: '15px',
-                                  color: '#66bb6a',
+                                  color: theme.palette.success.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -1118,7 +1248,7 @@ export default function QortalWallet() {
                     </StyledTableCell>
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       {row?.creatorAddress === address ? (
-                        <Box style={{ color: '#05a2e4' }}>
+                        <Box style={{ color: theme.palette.info.main }}>
                           {row?.creatorAddress}
                         </Box>
                       ) : (
@@ -1130,7 +1260,7 @@ export default function QortalWallet() {
                         if (row?.recipient) {
                           if (row?.recipient === address) {
                             return (
-                              <Box style={{ color: '#05a2e4' }}>
+                              <Box style={{ color: theme.palette.info.main }}>
                                 {row?.recipient}
                               </Box>
                             );
@@ -1146,9 +1276,9 @@ export default function QortalWallet() {
                     </StyledTableCell>
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       {row?.recipient === address ? (
-                        <Box style={{ color: '#66bb6a' }}>+ {row?.amount}</Box>
+                        <Box style={{ color: theme.palette.success.main }}>+ {row?.amount}</Box>
                       ) : (
-                        <Box style={{ color: '#f44336' }}>- {row?.amount}</Box>
+                        <Box style={{ color: theme.palette.error.main }}>- {row?.amount}</Box>
                       )}
                     </StyledTableCell>
                     <StyledTableCell style={{ width: 'auto' }} align="left">
@@ -1300,7 +1430,7 @@ export default function QortalWallet() {
                               <HistoryToggleOff
                                 style={{
                                   fontSize: '15px',
-                                  color: '#f44336',
+                                  color: theme.palette.error.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -1318,7 +1448,7 @@ export default function QortalWallet() {
                               <CheckCircleOutline
                                 style={{
                                   fontSize: '15px',
-                                  color: '#66bb6a',
+                                  color: theme.palette.success.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -1332,7 +1462,7 @@ export default function QortalWallet() {
                     </StyledTableCell>
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       {row?.creatorAddress === address ? (
-                        <Box style={{ color: '#05a2e4' }}>
+                        <Box style={{ color: theme.palette.info.main }}>
                           {row?.creatorAddress}
                         </Box>
                       ) : (
@@ -1406,7 +1536,7 @@ export default function QortalWallet() {
                                     blue: (
                                       <span
                                         style={{
-                                          color: '#05a2e4',
+                                          color: theme.palette.info.main,
                                           marginLeft: '5px',
                                           marginRight: '5px',
                                         }}
@@ -1594,7 +1724,7 @@ export default function QortalWallet() {
                               <HistoryToggleOff
                                 style={{
                                   fontSize: '15px',
-                                  color: '#f44336',
+                                  color: theme.palette.error.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -1612,7 +1742,7 @@ export default function QortalWallet() {
                               <CheckCircleOutline
                                 style={{
                                   fontSize: '15px',
-                                  color: '#66bb6a',
+                                  color: theme.palette.success.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -1626,7 +1756,7 @@ export default function QortalWallet() {
                     </StyledTableCell>
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       {row?.creatorAddress === address ? (
-                        <Box style={{ color: '#05a2e4' }}>
+                        <Box style={{ color: theme.palette.info.main }}>
                           {row?.creatorAddress}
                         </Box>
                       ) : (
@@ -1817,7 +1947,7 @@ export default function QortalWallet() {
                               <HistoryToggleOff
                                 style={{
                                   fontSize: '15px',
-                                  color: '#f44336',
+                                  color: theme.palette.error.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -1835,7 +1965,7 @@ export default function QortalWallet() {
                               <CheckCircleOutline
                                 style={{
                                   fontSize: '15px',
-                                  color: '#66bb6a',
+                                  color: theme.palette.success.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -1849,7 +1979,7 @@ export default function QortalWallet() {
                     </StyledTableCell>
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       {row?.creatorAddress === address ? (
-                        <Box style={{ color: '#05a2e4' }}>
+                        <Box style={{ color: theme.palette.info.main }}>
                           {row?.creatorAddress}
                         </Box>
                       ) : (
@@ -1860,7 +1990,7 @@ export default function QortalWallet() {
                       {(() => {
                         if (row?.type === 'TRANSFER_ASSET') {
                           return row?.recipient === address ? (
-                            <Box style={{ color: '#05a2e4' }}>
+                            <Box style={{ color: theme.palette.info.main }}>
                               {row?.recipient}
                             </Box>
                           ) : (
@@ -2019,7 +2149,7 @@ export default function QortalWallet() {
                               <HistoryToggleOff
                                 style={{
                                   fontSize: '15px',
-                                  color: '#f44336',
+                                  color: theme.palette.error.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -2037,7 +2167,7 @@ export default function QortalWallet() {
                               <CheckCircleOutline
                                 style={{
                                   fontSize: '15px',
-                                  color: '#66bb6a',
+                                  color: theme.palette.success.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -2051,7 +2181,7 @@ export default function QortalWallet() {
                     </StyledTableCell>
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       {row?.creatorAddress === address ? (
-                        <Box style={{ color: '#05a2e4' }}>
+                        <Box style={{ color: theme.palette.info.main }}>
                           {row?.creatorAddress}
                         </Box>
                       ) : (
@@ -2214,7 +2344,7 @@ export default function QortalWallet() {
                               <HistoryToggleOff
                                 style={{
                                   fontSize: '15px',
-                                  color: '#f44336',
+                                  color: theme.palette.error.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -2232,7 +2362,7 @@ export default function QortalWallet() {
                               <CheckCircleOutline
                                 style={{
                                   fontSize: '15px',
-                                  color: '#66bb6a',
+                                  color: theme.palette.success.main,
                                   marginTop: '2px',
                                 }}
                               />
@@ -2246,7 +2376,7 @@ export default function QortalWallet() {
                     </StyledTableCell>
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       {row?.creatorAddress === address ? (
-                        <Box style={{ color: '#05a2e4' }}>
+                        <Box style={{ color: theme.palette.info.main }}>
                           {row?.creatorAddress}
                         </Box>
                       ) : (
@@ -2255,7 +2385,7 @@ export default function QortalWallet() {
                     </StyledTableCell>
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       {row?.recipient === address ? (
-                        <Box style={{ color: '#05a2e4' }}>{row?.recipient}</Box>
+                        <Box style={{ color: theme.palette.info.main }}>{row?.recipient}</Box>
                       ) : (
                         row?.recipient
                       )}
@@ -2264,7 +2394,7 @@ export default function QortalWallet() {
                       {row?.sharePercent.startsWith('-') ? (
                         <Box
                           style={{
-                            color: '#f44336',
+                            color: theme.palette.error.main,
                             display: 'flex',
                             alignItems: 'center',
                           }}
@@ -2283,7 +2413,7 @@ export default function QortalWallet() {
                             <InfoOutlined
                               style={{
                                 fontSize: '14px',
-                                color: '#05a2e4',
+                                color: theme.palette.info.main,
                                 marginLeft: '8px',
                               }}
                             />
@@ -2292,7 +2422,7 @@ export default function QortalWallet() {
                       ) : (
                         <Box
                           style={{
-                            color: '#66bb6a',
+                            color: theme.palette.success.main,
                             display: 'flex',
                             alignItems: 'center',
                           }}
@@ -2311,7 +2441,7 @@ export default function QortalWallet() {
                             <InfoOutlined
                               style={{
                                 fontSize: '14px',
-                                color: '#05a2e4',
+                                color: theme.palette.info.main,
                                 marginLeft: '8px',
                               }}
                             />
@@ -2496,7 +2626,7 @@ export default function QortalWallet() {
                                 <HistoryToggleOff
                                   style={{
                                     fontSize: '15px',
-                                    color: '#f44336',
+                                    color: theme.palette.error.main,
                                     marginTop: '2px',
                                   }}
                                 />
@@ -2514,7 +2644,7 @@ export default function QortalWallet() {
                                 <CheckCircleOutline
                                   style={{
                                     fontSize: '15px',
-                                    color: '#66bb6a',
+                                    color: theme.palette.success.main,
                                     marginTop: '2px',
                                   }}
                                 />
@@ -2533,7 +2663,7 @@ export default function QortalWallet() {
                         >
                           <Box>
                             {row?.recipient === address ? (
-                              <Box style={{ color: '#05a2e4' }}>
+                              <Box style={{ color: theme.palette.info.main }}>
                                 {cropString(row?.creatorAddress)}
                               </Box>
                             ) : row?.recipient ? (
@@ -2550,12 +2680,16 @@ export default function QortalWallet() {
                           title={row?.identifier}
                         >
                           <Box>
-                            {row?.identifier ? cropString(row?.identifier) : EMPTY_STRING}
+                            {row?.identifier
+                              ? cropString(row?.identifier)
+                              : EMPTY_STRING}
                           </Box>
                         </CustomWidthTooltip>
                       </StyledTableCell>
                       <StyledTableCell style={{ width: 'auto' }} align="right">
-                        {row?.size > 0 ? humanFileSize(row?.size, true, 2) : EMPTY_STRING}
+                        {row?.size > 0
+                          ? humanFileSize(row?.size, true, 2)
+                          : EMPTY_STRING}
                       </StyledTableCell>
                       <StyledTableCell style={{ width: 'auto' }} align="left">
                         <CustomWidthTooltip
@@ -2564,7 +2698,7 @@ export default function QortalWallet() {
                         >
                           <Box>
                             {row?.recipient === address ? (
-                              <Box style={{ color: '#05a2e4' }}>
+                              <Box style={{ color: theme.palette.info.main }}>
                                 {cropString(row?.recipient)}
                               </Box>
                             ) : row?.recipient ? (
@@ -2614,7 +2748,7 @@ export default function QortalWallet() {
                               row?.sharePercent.startsWith('-') ? (
                                 <Box
                                   style={{
-                                    color: '#f44336',
+                                    color: theme.palette.error.main,
                                     display: 'flex',
                                     alignItems: 'center',
                                   }}
@@ -2634,7 +2768,7 @@ export default function QortalWallet() {
                                     <InfoOutlined
                                       style={{
                                         fontSize: '14px',
-                                        color: '#05a2e4',
+                                        color: theme.palette.info.main,
                                         marginLeft: '8px',
                                       }}
                                     />
@@ -2644,7 +2778,7 @@ export default function QortalWallet() {
                                 row?.sharePercent && (
                                   <Box
                                     style={{
-                                      color: '#66bb6a',
+                                      color: theme.palette.success.main,
                                       display: 'flex',
                                       alignItems: 'center',
                                     }}
@@ -2664,7 +2798,7 @@ export default function QortalWallet() {
                                       <InfoOutlined
                                         style={{
                                           fontSize: '14px',
-                                          color: '#05a2e4',
+                                          color: theme.palette.info.main,
                                           marginLeft: '8px',
                                         }}
                                       />
@@ -2832,8 +2966,8 @@ export default function QortalWallet() {
     );
   };
 
-  const QortSendDialogPage = () => {
-    return (
+  return (
+    <Box sx={{ width: '100%', mt: 2 }}>
       <Dialog
         fullScreen
         open={openQortSend}
@@ -2958,9 +3092,9 @@ export default function QortalWallet() {
               aria-label="send-qort"
               onClick={sendQortRequest}
               sx={{
-                backgroundColor: '#05a2e4',
+                backgroundcolor: theme.palette.info.main,
                 color: 'white',
-                '&:hover': { backgroundColor: '#02648d' },
+                '&:hover': { backgroundcolor: 'action.hover' },
               }}
             >
               {t('core:action.send', {
@@ -2995,7 +3129,13 @@ export default function QortalWallet() {
             gutterBottom
             sx={{ color: 'text.primary', fontWeight: 700 }}
           >
-            {walletBalanceQort + ' QORT'}
+            {isLoadingWalletBalanceQort ? (
+              <Box sx={{ width: '175px' }}>
+                <LinearProgress />
+              </Box>
+            ) : (
+              walletBalanceQort + ' QORT'
+            )}
           </Typography>
         </Box>
         <Box
@@ -3054,27 +3194,29 @@ export default function QortalWallet() {
           <NumericFormat
             decimalScale={8}
             defaultValue={0}
-            value={qortAmount}
+            value={qortAmount ?? EMPTY_STRING}
             allowNegative={false}
             customInput={TextField}
             valueIsNumericString
             variant="outlined"
             label={
-              t('core:amount', {
-                postProcess: 'capitalizeAll',
-              }) + '(QORT)'
+              t('core:amount', { postProcess: 'capitalizeAll' }) + '(QORT)'
             }
             fullWidth
             isAllowed={(values) => {
-              const maxQortCoin = walletBalanceQort - qortTxFee;
+              const max = maxQortCoin;
               const { formattedValue, floatValue } = values;
-              return formattedValue === EMPTY_STRING || (floatValue ?? 0) <= maxQortCoin;
+              return formattedValue === EMPTY_STRING || (floatValue ?? 0) <= max;
             }}
-            onValueChange={(values) => {
-              validateCanSendQortAmount(values.floatValue);
-            }}
+            onValueChange={onAmountChange}
+            onBlur={onAmountBlur}
             required
+            helperText={
+              amountTouched ? amountError || EMPTY_STRING : EMPTY_STRING
+            } // show only when touched
+            error={amountTouched && !!amountError}
           />
+
           <TextField
             required
             label={t('core:receiver_address_name', {
@@ -3083,12 +3225,22 @@ export default function QortalWallet() {
             id="qort-address"
             margin="normal"
             value={qortRecipient}
-            helperText={t('core:message.generic.qortal_address', {
-              postProcess: 'capitalizeFirstChar',
-            })}
+            onChange={(e) => setQortRecipient(e.target.value.trim())}
+            onBlur={onRecipientBlur}
             slotProps={{ htmlInput: { maxLength: 34, minLength: 3 } }}
-            onChange={(e) => validateCanSendQortAddress(e.target.value)}
             fullWidth
+            helperText={
+              recipientTouched
+                ? addressValidating
+                  ? t('core:message.generic.validating', {
+                      postProcess: 'capitalizeFirstChar',
+                    })
+                  : recipientError || EMPTY_STRING
+                : t('core:message.generic.qortal_address', {
+                    postProcess: 'capitalizeFirstChar',
+                  })
+            }
+            error={recipientTouched && !!recipientError}
           />
         </Box>
         <Box
@@ -3111,13 +3263,24 @@ export default function QortalWallet() {
           </Typography>
         </Box>
       </Dialog>
-    );
-  };
 
-  return (
-    <Box sx={{ width: '100%', mt: 2 }}>
-      {QortSendDialogPage()}
-      {QortAddressBookDialogPage()}
+      <DialogGeneral
+        aria-labelledby="qort-electrum-servers"
+        open={openQortAddressBook}
+        keepMounted={false}
+      >
+        <DialogContent>
+          <Typography
+            variant="h5"
+            align="center"
+            sx={{ color: 'text.primary', fontWeight: 700 }}
+          >
+            {t('core:message.generic.coming_soon', {
+              postProcess: 'capitalizeFirstChar',
+            })}
+          </Typography>
+        </DialogContent>
+      </DialogGeneral>
 
       <WalletCard sx={{ p: { xs: 2, md: 3 }, width: '100%' }}>
         <Grid container rowSpacing={{ xs: 2, md: 3 }} columnSpacing={2}>
@@ -3196,10 +3359,10 @@ export default function QortalWallet() {
                     })}
                   </Typography>
                   <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                    {walletBalanceQort ? (
-                      `${walletBalanceQort} QORT`
-                    ) : (
+                    {isLoadingWalletBalanceQort ? (
                       <LinearProgress />
+                    ) : (
+                      `${walletBalanceQort} QORT`
                     )}
                   </Typography>
                 </Grid>
@@ -3238,14 +3401,21 @@ export default function QortalWallet() {
                     >
                       {address}
                     </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={() =>
-                        navigator.clipboard.writeText(address ?? EMPTY_STRING)
-                      }
+                    <CustomWidthTooltip
+                      placement="top"
+                      title={t('core:action.copy_address', {
+                        postProcess: 'capitalizeFirstChar',
+                      })}
                     >
-                      <CopyAllTwoTone fontSize="small" />
-                    </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          navigator.clipboard.writeText(address ?? EMPTY_STRING)
+                        }
+                      >
+                        <CopyAllTwoTone fontSize="small" />
+                      </IconButton>
+                    </CustomWidthTooltip>
                   </Box>
                 </Grid>
 

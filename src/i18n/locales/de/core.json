@@ -7,7 +7,7 @@
     "change_server": "Server wechseln",
     "close": "Schließen",
     "copy_address": "Adresse kopieren",
-    "copy hash": "Hash kopieren: {{ hash }}",
+    "copy_hash": "Hash kopieren: {{ hash }}",
     "force_sync": "Synchronisierung erzwingen",
     "refresh": "Aktualisieren",
     "remove": "Entfernen",
@@ -79,6 +79,7 @@
       "sending_fee": "Aktuelle Sendegebühr ist {{ quantity }} {{ coin }}.",
       "sent_transaction": "Gesendete {{ coin }}-Transaktion war erfolgreich.",
       "unconfirmed_translaction": "Unbestätigt",
+      "validating": "Wird überprüft...",
       "waiting_confirmation": "Warten auf Bestätigung..."
     },
     "group_actions": {
@@ -95,6 +96,8 @@
       "update_group": "Neue Beschreibung: {{ newDescription }} ID: {{ id }}"
     },
     "error": {
+      "amount_exceeds_balance": "Maximal zulässig: {{ maxAmount }}",
+      "amount_positive": "Der Betrag muss größer als 0 sein",
       "bitcoin_address_invalid": "Ungültige BTC-Adresse",
       "digibyte_address_invalid": "Ungültige DGB-Adresse",
       "doge_address_invalid": "Ungültige DOGE-Adresse",
@@ -104,6 +107,10 @@
       "pirate_chain_gateway": "Sie können die Pirate-Chain-Wallet nicht über einen öffentlichen Knoten verwenden. Bitte nutzen Sie Ihren lokalen Knoten.",
       "pirate_chain_no_server": "Keine Verbindung zum Pirate-Chain-Lightwallet-Server.",
       "ravencoin_address_invalid": "Ungültige RVN-Adresse",
+      "recipient_lookup_failed": "Suche fehlgeschlagen",
+      "recipient_not_found": "Empfänger nicht gefunden",
+      "recipient_required": "Empfänger erforderlich",
+      "recipient_too_short": "Empfängeradresse ist zu kurz",
       "something_went_wrong": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
     }
   },

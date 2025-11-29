@@ -7,7 +7,7 @@
     "change_server": "サーバーを変更",
     "close": "閉じる",
     "copy_address": "アドレスをコピー",
-    "copy hash": "ハッシュをコピー: {{ hash }}",
+    "copy_hash": "ハッシュをコピー: {{ hash }}",
     "force_sync": "同期を強制",
     "refresh": "更新",
     "remove": "削除",
@@ -79,6 +79,7 @@
       "sending_fee": "現在の送金手数料は {{ quantity }} {{ coin }} です。",
       "sent_transaction": "{{ coin }} のトランザクションが正常に送信されました。",
       "unconfirmed_translaction": "未確認",
+      "validating": "確認中...",
       "waiting_confirmation": "承認待ち...",
       "welcome": "<brand>Qortal Wallets</brand> へようこそ"
     },
@@ -96,6 +97,8 @@
       "update_group": "新しい説明: {{ newDescription }} ID: {{ id }}"
     },
     "error": {
+      "amount_exceeds_balance": "最大許可額: {{ maxAmount }}",
+      "amount_positive": "金額は0より大きくなければなりません",
       "bitcoin_address_invalid": "無効な BTC アドレス",
       "digibyte_address_invalid": "無効な DGB アドレス",
       "doge_address_invalid": "無効な DOGE アドレス",
@@ -105,6 +108,10 @@
       "pirate_chain_gateway": "公開ノード経由で Pirate Chain ウォレットは使用できません。ローカルノードを使用してください。",
       "pirate_chain_no_server": "Pirate Chain の Lightwallet サーバーに接続できません。",
       "ravencoin_address_invalid": "無効な RVN アドレス",
+      "recipient_lookup_failed": "検索に失敗しました",
+      "recipient_not_found": "受取人が見つかりません",
+      "recipient_required": "受取人は必須です",
+      "recipient_too_short": "受取人のアドレスが短すぎます",
       "something_went_wrong": "問題が発生しました。もう一度お試しください。"
     }
   },

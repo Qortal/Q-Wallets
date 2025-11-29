@@ -111,25 +111,23 @@ export const FeeManager = ({ coin, onChange }: FeeManagerProps) => {
             onChange={handleChangeRecommended}
             aria-label="Platform"
           >
-            {data && (
-              <>
-                <ToggleButton value="low">
-                  {t('core:fee.low', {
-                    postProcess: 'capitalizeFirstChar',
-                  })}
-                </ToggleButton>
-                <ToggleButton value="medium">
-                  {t('core:fee.medium', {
-                    postProcess: 'capitalizeFirstChar',
-                  })}
-                </ToggleButton>
-                <ToggleButton value="high">
-                  {t('core:fee.high', {
-                    postProcess: 'capitalizeFirstChar',
-                  })}
-                </ToggleButton>
-              </>
-            )}
+            {data && [
+              <ToggleButton key="low" value="low">
+                {t('core:fee.low', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </ToggleButton>,
+              <ToggleButton key="medium" value="medium">
+                {t('core:fee.medium', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </ToggleButton>,
+              <ToggleButton key="high" value="high">
+                {t('core:fee.high', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </ToggleButton>
+            ]}
 
             <ToggleButton value="custom">
               {t('core:fee.custom', {

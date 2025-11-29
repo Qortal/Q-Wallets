@@ -7,7 +7,7 @@
     "change_server": "تغيير الخادم",
     "close": "إغلاق",
     "copy_address": "نسخ العنوان",
-    "copy hash": "نسخ التجزئة: {{ hash }}",
+    "copy_hash": "نسخ التجزئة: {{ hash }}",
     "force_sync": "فرض المزامنة",
     "refresh": "تحديث",
     "remove": "إزالة",
@@ -79,6 +79,7 @@
       "sending_fee": "رسوم الإرسال الحالية هي {{ quantity }} {{ coin }}.",
       "sent_transaction": "تم إرسال معاملة {{ coin }} بنجاح.",
       "unconfirmed_translaction": "غير مؤكدة",
+      "validating": "جارٍ التحقق...",
       "waiting_confirmation": "في انتظار التأكيد..."
     },
     "group_actions": {
@@ -95,6 +96,8 @@
       "update_group": "الوصف الجديد: {{ newDescription }} المعرف: {{ id }}"
     },
     "error": {
+      "amount_exceeds_balance": "الحد الأقصى المسموح: {{ maxAmount }}",
+      "amount_positive": "يجب أن يكون المبلغ أكبر من 0",
       "bitcoin_address_invalid": "عنوان BTC غير صالح",
       "digibyte_address_invalid": "عنوان DGB غير صالح",
       "doge_address_invalid": "عنوان DOGE غير صالح",
@@ -104,6 +107,10 @@
       "pirate_chain_gateway": "لا يمكنك استخدام محفظة Pirate Chain عبر عقدة عامة. يُرجى استخدام عقدتك المحلية.",
       "pirate_chain_no_server": "لا يوجد اتصال بخادم Lightwallet الخاص بـ Pirate Chain.",
       "ravencoin_address_invalid": "عنوان RVN غير صالح",
+      "recipient_lookup_failed": "فشل في البحث",
+      "recipient_not_found": "لم يتم العثور على المستلم",
+      "recipient_required": "المستلم مطلوب",
+      "recipient_too_short": "عنوان المستلم قصير جدًا",
       "something_went_wrong": "حدث خطأ ما. يُرجى المحاولة مرة أخرى."
     }
   },

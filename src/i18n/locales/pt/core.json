@@ -7,7 +7,7 @@
     "change_server": "alterar servidor",
     "close": "fechar",
     "copy_address": "copiar endereço",
-    "copy hash": "copiar hash: {{ hash }}",
+    "copy_hash": "copiar hash: {{ hash }}",
     "force_sync": "forçar sincronização",
     "refresh": "atualizar",
     "remove": "remover",
@@ -79,6 +79,7 @@
       "sending_fee": "A taxa de envio atual é {{ quantity }} {{ coin }}.",
       "sent_transaction": "A transação de {{ coin }} foi enviada com sucesso.",
       "unconfirmed_translaction": "Não confirmada",
+      "validating": "Validando...",
       "waiting_confirmation": "Aguardando confirmação...",
       "welcome": "Bem-vindo ao <brand>Qortal Wallets</brand>"
     },
@@ -96,6 +97,8 @@
       "update_group": "nova descrição: {{ newDescription }} ID: {{ id }}"
     },
     "error": {
+      "amount_exceeds_balance": "Máximo permitido: {{ maxAmount }}",
+      "amount_positive": "O valor deve ser maior que 0",
       "bitcoin_address_invalid": "Endereço BTC inválido",
       "digibyte_address_invalid": "Endereço DGB inválido",
       "doge_address_invalid": "Endereço DOGE inválido",
@@ -105,6 +108,10 @@
       "pirate_chain_gateway": "Você não pode usar a carteira Pirate Chain através de um nó público. Use seu nó local.",
       "pirate_chain_no_server": "Sem conexão com o servidor Lightwallet do Pirate Chain.",
       "ravencoin_address_invalid": "Endereço RVN inválido",
+      "recipient_lookup_failed": "Falha na pesquisa",
+      "recipient_not_found": "Destinatário não encontrado",
+      "recipient_required": "Destinatário obrigatório",
+      "recipient_too_short": "Endereço do destinatário muito curto",
       "something_went_wrong": "Algo deu errado. Tente novamente."
     }
   },

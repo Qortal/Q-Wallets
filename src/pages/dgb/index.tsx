@@ -51,6 +51,7 @@ import {
 import coinLogoDGB from '../../assets/dgb.png';
 import { useTranslation } from 'react-i18next';
 import {
+  DGB_FEE,
   EMPTY_STRING,
   TIME_MINUTES_3,
   TIME_MINUTES_5,
@@ -170,13 +171,12 @@ function valueTextDgb(value: number) {
 
 export default function DigibyteWallet() {
   const { t } = useTranslation(['core']);
+  const theme = useTheme();
 
   const [walletInfoDgb, setWalletInfoDgb] = useState<any>({});
-  const [walletBalanceDgb, setWalletBalanceDgb] = useState<any>(null);
+  const [walletBalanceDgb, setWalletBalanceDgb] = useState<any>(0);
   const [isLoadingWalletBalanceDgb, setIsLoadingWalletBalanceDgb] =
     useState<boolean>(true);
-  const [_isLoadingWalletInfoDgb, setIsLoadingWalletInfoDgb] =
-    useState<boolean>(false);
   const [transactionsDgb, setTransactionsDgb] = useState<any>([]);
   const [isLoadingDgbTransactions, setIsLoadingDgbTransactions] =
     useState<boolean>(true);
@@ -212,24 +212,19 @@ export default function DigibyteWallet() {
   const handleOpenDgbSend = () => {
     setDgbAmount(0);
     setDgbRecipient(EMPTY_STRING);
-    setDgbFee(10);
+    setDgbFee(DGB_FEE);
     setOpenDgbSend(true);
+    setAddressFormatError(false);
+    setOpenSendDgbError(false);
   };
 
-  const disableCanSendDgb = () => {
-    if (dgbAmount <= 0 || null || !dgbAmount) {
-      return true;
-    }
-    if (addressFormatError || EMPTY_STRING) {
-      return true;
-    }
-    return false;
-  };
+  const disableCanSendDgb = () =>
+    dgbAmount <= 0 || dgbRecipient === EMPTY_STRING || addressFormatError;
 
   const handleRecipientChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const value = e.target.value;
+    const value = e.target.value.trim();
     const pattern =
       /^(D[1-9A-HJ-NP-Za-km-z]{33}|S[1-9A-HJ-NP-Za-km-z]{33}|dgb1[2-9A-HJ-NP-Za-z]{39})$/;
 
@@ -246,6 +241,8 @@ export default function DigibyteWallet() {
     setDgbAmount(0);
     setDgbFee(0);
     setOpenDgbSend(false);
+    setAddressFormatError(false);
+    setOpenSendDgbError(false);
   };
 
   const changeCopyDgbTxHash = async () => {
@@ -294,7 +291,6 @@ export default function DigibyteWallet() {
   };
 
   const getWalletInfoDgb = async () => {
-    setIsLoadingWalletInfoDgb(true);
     try {
       setWalletInfoError(null);
       const response = await qortalRequest({
@@ -320,48 +316,37 @@ export default function DigibyteWallet() {
         error?.message ? String(error.message) : String(error)
       );
       console.error('ERROR GET DGB WALLET INFO', error);
-    } finally {
-      setIsLoadingWalletInfoDgb(false);
     }
   };
 
-  useEffect(() => {
-    getWalletInfoDgb();
-  }, []);
+  const getWalletBalanceDgb = async () => {
+    try {
+      setIsLoadingWalletBalanceDgb(true);
 
-  function computeBalanceFromTransactions(txs: any[]): number {
-    if (!Array.isArray(txs)) return 0;
-    let satoshis = 0;
-    for (const tx of txs) {
-      // Only count confirmed txs (those with a timestamp)
-      if (!tx?.timestamp) continue;
-      const inSat = (tx?.inputs || [])
-        .filter((i: any) => i?.addressInWallet)
-        .reduce((acc: number, cur: any) => acc + Number(cur?.amount || 0), 0);
-      const outSat = (tx?.outputs || [])
-        .filter((o: any) => o?.addressInWallet)
-        .reduce((acc: number, cur: any) => acc + Number(cur?.amount || 0), 0);
-      satoshis += outSat - inSat; // net effect on wallet
+      const response = await qortalRequestWithTimeout(
+        {
+          action: 'GET_WALLET_BALANCE',
+          coin: Coin.DGB,
+        },
+        TIME_MINUTES_5
+      );
+      if (!response?.error) {
+        setWalletBalanceDgb(response);
+      }
+    } catch (error: any) {
+      setWalletBalanceDgb(null);
+      setWalletBalanceError(
+        error?.message ? String(error.message) : String(error)
+      );
+      console.error('ERROR GET DGB BALANCE', error);
+    } finally {
+      setIsLoadingWalletBalanceDgb(false);
     }
-    return +(satoshis / 1e8).toFixed(8);
-  }
-
-  useEffect(() => {
-    const intervalgetTransactionsDgb = setInterval(() => {
-      getTransactionsDgb();
-    }, TIME_MINUTES_3);
-    getTransactionsDgb();
-    return () => {
-      clearInterval(intervalgetTransactionsDgb);
-    };
-  }, []);
+  };
 
   const getTransactionsDgb = async () => {
     try {
       setIsLoadingDgbTransactions(true);
-      setIsLoadingWalletBalanceDgb(true);
-      setWalletBalanceError(null);
-
       const responseDgbTransactions = await qortalRequestWithTimeout(
         {
           action: 'GET_USER_WALLET_TRANSACTIONS',
@@ -372,42 +357,27 @@ export default function DigibyteWallet() {
 
       if (responseDgbTransactions?.error) {
         setTransactionsDgb([]);
-        setWalletBalanceDgb(null);
-        setWalletBalanceError(
-          typeof responseDgbTransactions.error === 'string'
-            ? responseDgbTransactions.error
-            : t('core:message.error.loading_balance', {
-                postProcess: 'capitalizeFirstChar',
-              })
-        );
       } else {
         setTransactionsDgb(responseDgbTransactions);
-        const computed = computeBalanceFromTransactions(
-          responseDgbTransactions || []
-        );
-        setWalletBalanceDgb(computed);
-        setWalletBalanceError(null);
       }
     } catch (error: any) {
       setTransactionsDgb([]);
-      setWalletBalanceDgb(null);
-      setWalletBalanceError(
-        error?.message ? String(error.message) : String(error)
-      );
       console.error('ERROR GET DGB TRANSACTIONS', error);
     } finally {
       setIsLoadingDgbTransactions(false);
-      setIsLoadingWalletBalanceDgb(false);
     }
   };
 
   useEffect(() => {
     let intervalId: any;
     (async () => {
-      await getWalletInfoDgb();
-      await getTransactionsDgb();
-      await getTransactionsDgb();
+      await Promise.all([
+        getWalletInfoDgb(),
+        getWalletBalanceDgb(),
+        getTransactionsDgb(),
+      ]);
       intervalId = setInterval(() => {
+        getWalletBalanceDgb();
         getTransactionsDgb();
       }, TIME_MINUTES_3);
     })();
@@ -447,7 +417,7 @@ export default function DigibyteWallet() {
       if (!sendRequest?.error) {
         setDgbAmount(0);
         setDgbRecipient(EMPTY_STRING);
-        setDgbFee(10);
+        setDgbFee(DGB_FEE);
         setOpenTxDgbSubmit(false);
         setOpenSendDgbSuccess(true);
         setIsLoadingWalletBalanceDgb(true);
@@ -457,7 +427,7 @@ export default function DigibyteWallet() {
     } catch (error) {
       setDgbAmount(0);
       setDgbRecipient(EMPTY_STRING);
-      setDgbFee(10);
+      setDgbFee(DGB_FEE);
       setOpenTxDgbSubmit(false);
       setOpenSendDgbError(true);
       setIsLoadingWalletBalanceDgb(true);
@@ -467,8 +437,259 @@ export default function DigibyteWallet() {
     }
   };
 
-  const DgbSendDialogPage = () => {
+  const tableLoader = () => {
     return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <Box
+          style={{
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <CircularProgress />
+        </Box>
+        <Box
+          style={{
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            marginTop: '20px',
+          }}
+        >
+          <Typography
+            variant="h5"
+            sx={{ color: 'primary.main', fontStyle: 'italic', fontWeight: 700 }}
+          >
+            {t('core:message.generic.loading_transactions', {
+              postProcess: 'capitalizeFirstChar',
+            })}
+          </Typography>
+        </Box>
+      </Box>
+    );
+  };
+
+  const transactionsTable = () => {
+    return (
+      <TableContainer component={Paper}>
+        <Table
+          stickyHeader
+          sx={{ width: '100%' }}
+          aria-label="transactions table"
+        >
+          <TableHead>
+            <TableRow>
+              <StyledTableCell align="left">
+                {t('core:sender', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:receiver', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:transaction_hash', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:total_amount', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:fee.fee', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:time', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {(rowsPerPage > 0
+              ? transactionsDgb.slice(
+                  page * rowsPerPage,
+                  page * rowsPerPage + rowsPerPage
+                )
+              : transactionsDgb
+            ).map(
+              (
+                row: {
+                  inputs: {
+                    address: any;
+                    addressInWallet: boolean;
+                    amount: any;
+                  }[];
+                  outputs: {
+                    address: any;
+                    addressInWallet: boolean;
+                    amount: any;
+                  }[];
+                  txHash: string;
+                  totalAmount: any;
+                  feeAmount: any;
+                  timestamp: number;
+                },
+                k: Key
+              ) => (
+                <StyledTableRow key={k}>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    {row.inputs.map((input, index) => (
+                      <Box
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          color: input.addressInWallet
+                            ? undefined
+                            : theme.palette.info.main,
+                        }}
+                      >
+                        <span style={{ flex: 1, textAlign: 'left' }}>
+                          {input.address}
+                        </span>
+                        <span style={{ flex: 1, textAlign: 'right' }}>
+                          {(Number(input.amount) / 1e8).toFixed(8)}
+                        </span>
+                      </Box>
+                    ))}
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    {row.outputs.map((output, index) => (
+                      <Box
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          color: output.addressInWallet
+                            ? undefined
+                            : theme.palette.info.main,
+                        }}
+                      >
+                        <span style={{ flex: 1, textAlign: 'left' }}>
+                          {output.address}
+                        </span>
+                        <span style={{ flex: 1, textAlign: 'right' }}>
+                          {(Number(output.amount) / 1e8).toFixed(8)}
+                        </span>
+                      </Box>
+                    ))}
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    {cropString(row?.txHash)}
+                    <CustomWidthTooltip
+                      placement="top"
+                      title={
+                        copyDgbTxHash
+                          ? copyDgbTxHash
+                          : t('core:action.copy_hash', {
+                              hash: row?.txHash,
+                              postProcess: 'capitalizeFirstChar',
+                            })
+                      }
+                    >
+                      <IconButton
+                        aria-label="copy"
+                        size="small"
+                        onClick={() => {
+                          navigator.clipboard.writeText(row?.txHash);
+                          changeCopyDgbTxHash();
+                        }}
+                      >
+                        <CopyAllTwoTone fontSize="small" />
+                      </IconButton>
+                    </CustomWidthTooltip>
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    {row?.totalAmount > 0 ? (
+                      <Box style={{ color: theme.palette.success.main }}>
+                        +{(Number(row?.totalAmount) / 1e8).toFixed(8)}
+                      </Box>
+                    ) : (
+                      <Box style={{ color: theme.palette.error.main }}>
+                        {(Number(row?.totalAmount) / 1e8).toFixed(8)}
+                      </Box>
+                    )}
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="right">
+                    {row?.totalAmount <= 0 ? (
+                      <Box style={{ color: theme.palette.error.main }}>
+                        -{(Number(row?.feeAmount) / 1e8).toFixed(8)}
+                      </Box>
+                    ) : (
+                      <Box style={{ color: 'grey' }}>
+                        -{(Number(row?.feeAmount) / 1e8).toFixed(8)}
+                      </Box>
+                    )}
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    <CustomWidthTooltip
+                      placement="top"
+                      title={
+                        row?.timestamp
+                          ? new Date(row?.timestamp).toLocaleString()
+                          : t('core:message.generic.waiting_confirmation', {
+                              postProcess: 'capitalizeFirstChar',
+                            })
+                      }
+                    >
+                      <Box>
+                        {row?.timestamp
+                          ? epochToAgo(row?.timestamp)
+                          : t('core:message.generic.unconfirmed_transaction', {
+                              postProcess: 'capitalizeFirstChar',
+                            })}
+                      </Box>
+                    </CustomWidthTooltip>
+                  </StyledTableCell>
+                </StyledTableRow>
+              )
+            )}
+            {emptyRows > 0 && (
+              <TableRow style={{ height: 53 * emptyRows }}>
+                <TableCell colSpan={6} />
+              </TableRow>
+            )}
+          </TableBody>
+          <TableFooter sx={{ width: '100%' }}>
+            <TableRow>
+              <TablePagination
+                labelRowsPerPage={t('core:rows_per_page', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+                rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
+                colSpan={6}
+                count={transactionsDgb.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                slotProps={{
+                  select: {
+                    inputProps: {
+                      'aria-label': 'rows per page',
+                    },
+                    native: true,
+                  },
+                }}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                ActionsComponent={TablePaginationActions}
+              />
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </TableContainer>
+    );
+  };
+
+  return (
+    <Box sx={{ width: '100%', mt: 2 }}>
       <Dialog
         fullScreen
         open={openDgbSend}
@@ -593,9 +814,9 @@ export default function DigibyteWallet() {
               aria-label="send-dgb"
               onClick={sendDgbRequest}
               sx={{
-                backgroundColor: '#05a2e4',
+                backgroundcolor: 'action.main',
                 color: 'white',
-                '&:hover': { backgroundColor: '#02648d' },
+                '&:hover': { backgroundcolor: 'action.hover' },
               }}
             >
               {t('core:action.send', {
@@ -637,7 +858,7 @@ export default function DigibyteWallet() {
             ) : walletBalanceError ? (
               walletBalanceError
             ) : (
-              walletBalanceDgb.toFixed(8) + ' DGB'
+              walletBalanceDgb + ' DGB'
             )}
           </Typography>
         </Box>
@@ -672,7 +893,7 @@ export default function DigibyteWallet() {
               if (newMaxDgbAmount < 0) {
                 return Number(0.0) + ' DGB';
               } else {
-                return newMaxDgbAmount.toFixed(8) + ' DGB';
+                return newMaxDgbAmount + ' DGB';
               }
             })()}
           </Typography>
@@ -692,11 +913,15 @@ export default function DigibyteWallet() {
         <Box
           sx={{
             display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginTop: '20px',
             flexDirection: 'column',
-            '& .MuiTextField-root': { width: '50ch' },
+            alignItems: 'stretch',
+            justifyContent: 'center',
+            gap: 2,
+            mt: 2.5,
+            mx: 'auto',
+            width: '100%',
+            maxWidth: 420,
+            px: { xs: 2, sm: 1 },
           }}
         >
           <NumericFormat
@@ -708,6 +933,7 @@ export default function DigibyteWallet() {
             valueIsNumericString
             variant="outlined"
             label="Amount (DGB)"
+            fullWidth
             isAllowed={(values) => {
               const maxDgbCoin = walletBalanceDgb - (dgbFee * 1000) / 1e8;
               const { formattedValue, floatValue } = values;
@@ -731,6 +957,7 @@ export default function DigibyteWallet() {
             value={dgbRecipient}
             onChange={handleRecipientChange}
             error={addressFormatError}
+            fullWidth
             helperText={
               addressFormatError
                 ? t('core:message.error.digibyte_address_invalid', {
@@ -743,11 +970,16 @@ export default function DigibyteWallet() {
           />
         </Box>
         <Box
-          style={{
+          sx={{
             alignItems: 'center',
             display: 'flex',
+            flexDirection: 'column',
             justifyContent: 'center',
+            mt: 2.5,
+            mx: 'auto',
             width: '100%',
+            maxWidth: 420,
+            px: { xs: 2, sm: 1 },
           }}
         >
           <Box
@@ -756,8 +988,7 @@ export default function DigibyteWallet() {
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
-              marginTop: '20px',
-              width: '50ch',
+              width: '100%',
             }}
           >
             <Typography id="dgb-fee-slider" gutterBottom>
@@ -789,258 +1020,7 @@ export default function DigibyteWallet() {
           </Box>
         </Box>
       </Dialog>
-    );
-  };
 
-  const tableLoader = () => {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap' }}>
-        <Box
-          style={{
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          <CircularProgress />
-        </Box>
-        <Box
-          style={{
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            marginTop: '20px',
-          }}
-        >
-          <Typography
-            variant="h5"
-            sx={{ color: 'primary.main', fontStyle: 'italic', fontWeight: 700 }}
-          >
-            {t('core:message.generic.loading_transactions', {
-              postProcess: 'capitalizeFirstChar',
-            })}
-          </Typography>
-        </Box>
-      </Box>
-    );
-  };
-
-  const transactionsTable = () => {
-    return (
-      <TableContainer component={Paper}>
-        <Table
-          stickyHeader
-          sx={{ width: '100%' }}
-          aria-label="transactions table"
-        >
-          <TableHead>
-            <TableRow>
-              <StyledTableCell align="left">
-                {t('core:sender', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:receiver', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:transaction_hash', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:total_amount', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:fee.fee', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:time', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {(rowsPerPage > 0
-              ? transactionsDgb.slice(
-                  page * rowsPerPage,
-                  page * rowsPerPage + rowsPerPage
-                )
-              : transactionsDgb
-            ).map(
-              (
-                row: {
-                  inputs: {
-                    address: any;
-                    addressInWallet: boolean;
-                    amount: any;
-                  }[];
-                  outputs: {
-                    address: any;
-                    addressInWallet: boolean;
-                    amount: any;
-                  }[];
-                  txHash: string;
-                  totalAmount: any;
-                  feeAmount: any;
-                  timestamp: number;
-                },
-                k: Key
-              ) => (
-                <StyledTableRow key={k}>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    {row.inputs.map((input, index) => (
-                      <Box
-                        key={index}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          color: input.addressInWallet ? undefined : 'grey',
-                        }}
-                      >
-                        <span style={{ flex: 1, textAlign: 'left' }}>
-                          {input.address}
-                        </span>
-                        <span style={{ flex: 1, textAlign: 'right' }}>
-                          {(Number(input.amount) / 1e8).toFixed(8)}
-                        </span>
-                      </Box>
-                    ))}
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    {row.outputs.map((output, index) => (
-                      <Box
-                        key={index}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          color: output.addressInWallet ? undefined : 'grey',
-                        }}
-                      >
-                        <span style={{ flex: 1, textAlign: 'left' }}>
-                          {output.address}
-                        </span>
-                        <span style={{ flex: 1, textAlign: 'right' }}>
-                          {(Number(output.amount) / 1e8).toFixed(8)}
-                        </span>
-                      </Box>
-                    ))}
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    {cropString(row?.txHash)}
-                    <CustomWidthTooltip
-                      placement="top"
-                      title={
-                        copyDgbTxHash
-                          ? copyDgbTxHash
-                          : t('core:action.copy_hash', {
-                              hash: row?.txHash,
-                              postProcess: 'capitalizeFirstChar',
-                            })
-                      }
-                    >
-                      <IconButton
-                        aria-label="copy"
-                        size="small"
-                        onClick={() => {
-                          (navigator.clipboard.writeText(row?.txHash),
-                            changeCopyDgbTxHash());
-                        }}
-                      >
-                        <CopyAllTwoTone fontSize="small" />
-                      </IconButton>
-                    </CustomWidthTooltip>
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    {row?.totalAmount > 0 ? (
-                      <Box style={{ color: '#66bb6a' }}>
-                        +{(Number(row?.totalAmount) / 1e8).toFixed(8)}
-                      </Box>
-                    ) : (
-                      <Box style={{ color: '#f44336' }}>
-                        {(Number(row?.totalAmount) / 1e8).toFixed(8)}
-                      </Box>
-                    )}
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="right">
-                    {row?.totalAmount <= 0 ? (
-                      <Box style={{ color: '#f44336' }}>
-                        -{(Number(row?.feeAmount) / 1e8).toFixed(8)}
-                      </Box>
-                    ) : (
-                      <Box style={{ color: 'grey' }}>
-                        -{(Number(row?.feeAmount) / 1e8).toFixed(8)}
-                      </Box>
-                    )}
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    <CustomWidthTooltip
-                      placement="top"
-                      title={
-                        row?.timestamp
-                          ? new Date(row?.timestamp).toLocaleString()
-                          : t('core:message.generic.waiting_confirmation', {
-                              postProcess: 'capitalizeFirstChar',
-                            })
-                      }
-                    >
-                      <Box>
-                        {row?.timestamp
-                          ? epochToAgo(row?.timestamp)
-                          : t('core:message.generic.unconfirmed_transaction', {
-                              postProcess: 'capitalizeFirstChar',
-                            })}
-                      </Box>
-                    </CustomWidthTooltip>
-                  </StyledTableCell>
-                </StyledTableRow>
-              )
-            )}
-            {emptyRows > 0 && (
-              <TableRow style={{ height: 53 * emptyRows }}>
-                <TableCell colSpan={6} />
-              </TableRow>
-            )}
-          </TableBody>
-          <TableFooter sx={{ width: '100%' }}>
-            <TableRow>
-              <TablePagination
-                labelRowsPerPage={t('core:rows_per_page', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-                rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
-                colSpan={5}
-                count={transactionsDgb.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                slotProps={{
-                  select: {
-                    inputProps: {
-                      'aria-label': 'rows per page',
-                    },
-                    native: true,
-                  },
-                }}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                ActionsComponent={TablePaginationActions}
-              />
-            </TableRow>
-          </TableFooter>
-        </Table>
-      </TableContainer>
-    );
-  };
-
-  const DgbAddressBookDialogPage = () => {
-    return (
       <DialogGeneral
         aria-labelledby="dgb-electrum-servers"
         open={openDgbAddressBook}
@@ -1058,13 +1038,6 @@ export default function DigibyteWallet() {
           </Typography>
         </DialogContent>
       </DialogGeneral>
-    );
-  };
-
-  return (
-    <Box sx={{ width: '100%', mt: 2 }}>
-      {DgbSendDialogPage()}
-      {DgbAddressBookDialogPage()}
 
       <WalletCard sx={{ p: { xs: 2, md: 3 }, width: '100%' }}>
         <Grid container rowSpacing={{ xs: 2, md: 3 }} columnSpacing={2}>
@@ -1138,9 +1111,9 @@ export default function DigibyteWallet() {
                   <Typography variant="h5" sx={{ fontWeight: 700 }}>
                     {walletBalanceDgb ? (
                       `${walletBalanceDgb} DGB`
-                    ) : (
+                    ) : isLoadingWalletBalanceDgb ? (
                       <LinearProgress />
-                    )}
+                    ) : undefined}
                   </Typography>
                 </Grid>
 
@@ -1178,16 +1151,23 @@ export default function DigibyteWallet() {
                     >
                       {walletInfoDgb?.address}
                     </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={() =>
-                        navigator.clipboard.writeText(
-                          walletInfoDgb?.address ?? EMPTY_STRING
-                        )
-                      }
+                    <CustomWidthTooltip
+                      placement="top"
+                      title={t('core:action.copy_address', {
+                        postProcess: 'capitalizeFirstChar',
+                      })}
                     >
-                      <CopyAllTwoTone fontSize="small" />
-                    </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          navigator.clipboard.writeText(
+                            walletInfoDgb?.address ?? EMPTY_STRING
+                          )
+                        }
+                      >
+                        <CopyAllTwoTone fontSize="small" />
+                      </IconButton>
+                    </CustomWidthTooltip>
                   </Box>
                 </Grid>
 

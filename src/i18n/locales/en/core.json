@@ -7,7 +7,7 @@
     "change_server": "change server",
     "close": "close",
     "copy_address": "copy address",
-    "copy hash": "copy hash: {{ hash }}",
+    "copy_hash": "copy hash: {{ hash }}",
     "force_sync": "force sync",
     "refresh": "refresh",
     "remove": "remove",
@@ -47,7 +47,7 @@
   "max_sendable": "max sendable:",
   "memo": "memo",
   "message": {
-    "generic": {
+    "generic": {      
       "bitcoin_address": "BTC addresses should be 34 characters long for BIP44 (1 prefix) and BIP49 (3 prefix) or 42 characters long for BIP84 (bc1 prefix)",
       "bitcoin_wallet": "Bitcoin Wallet",
       "confirmations": "{{ count }} confirmations",
@@ -75,10 +75,11 @@
       "qortal_address": "Qortal address should be 34 characters long (Name min 3 characters)",
       "qortal_wallet": "Qortal Wallet",
       "ravencoin_address": "RVN addresses should be 34 characters long for BIP44 (R prefix)",
-      "ravencoin_wallet": "Ravencoin Wallet",
+      "ravencoin_wallet": "Ravencoin Wallet",    
       "sending_fee": "Current sending fee is {{ quantity }} {{ coin }}.",
       "sent_transaction": "Sent {{ coin }} transaction was successful.",
       "unconfirmed_translaction": "Unconfirmed",
+      "validating": "Validating...",
       "waiting_confirmation": "Waiting for confirmation..."
     },
     "group_actions": {
@@ -95,6 +96,8 @@
       "update_group": "new description: {{ newDescription }} ID: {{ id }}"
     },
     "error": {
+      "amount_positive": "Amount must be > 0",
+      "amount_exceeds_balance": "`Max allowed: {{ maxAmount }}",
       "bitcoin_address_invalid": "Invalid BTC address",
       "digibyte_address_invalid": "Invalid DGB address",
       "doge_address_invalid": "Invalid DOGE address",
@@ -104,6 +107,10 @@
       "pirate_chain_gateway": "You cannot use Pirate Chain wallet through public node. Please use your local node.",
       "pirate_chain_no_server": "No Connection To Pirate Chain Lightwallet Server.",
       "ravencoin_address_invalid": "Invalid RVN address",
+      "recipient_lookup_failed": "Lookup failed",
+      "recipient_not_found": "Recipient not found",
+      "recipient_required": "Recipient required",
+      "recipient_too_short": "Recipient too short",
       "something_went_wrong": "Something went wrong. Please try again."
     }
   },

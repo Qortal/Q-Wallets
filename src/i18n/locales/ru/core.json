@@ -7,7 +7,7 @@
     "change_server": "сменить сервер",
     "close": "закрыть",
     "copy_address": "скопировать адрес",
-    "copy hash": "скопировать хеш: {{ hash }}",
+    "copy_hash": "скопировать хеш: {{ hash }}",
     "force_sync": "принудительная синхронизация",
     "refresh": "обновить",
     "remove": "удалить",
@@ -79,6 +79,7 @@
       "sending_fee": "Текущая комиссия за отправку — {{ quantity }} {{ coin }}.",
       "sent_transaction": "Транзакция {{ coin }} успешно отправлена.",
       "unconfirmed_translaction": "не подтверждена",
+      "validating": "Проверка...",
       "waiting_confirmation": "Ожидание подтверждения...",
       "welcome": "Добро пожаловать в <brand>Qortal Wallets</brand>"
     },
@@ -96,6 +97,8 @@
       "update_group": "новое описание: {{ newDescription }} ID: {{ id }}"
     },
     "error": {
+      "amount_exceeds_balance": "Максимально допустимо: {{ maxAmount }}",
+      "amount_positive": "Сумма должна быть больше 0",
       "bitcoin_address_invalid": "Недействительный адрес BTC",
       "digibyte_address_invalid": "Недействительный адрес DGB",
       "doge_address_invalid": "Недействительный адрес DOGE",
@@ -105,6 +108,10 @@
       "pirate_chain_gateway": "Нельзя использовать кошелёк Pirate Chain через публичный узел. Пожалуйста, используйте локальный узел.",
       "pirate_chain_no_server": "Нет подключения к серверу Lightwallet Pirate Chain.",
       "ravencoin_address_invalid": "Недействительный адрес RVN",
+      "recipient_lookup_failed": "Ошибка поиска",
+      "recipient_not_found": "Получатель не найден",
+      "recipient_required": "Получатель обязателен",
+      "recipient_too_short": "Адрес получателя слишком короткий",
       "something_went_wrong": "Что-то пошло не так. Пожалуйста, попробуйте ещё раз."
     }
   },

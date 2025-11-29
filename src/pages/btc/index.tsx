@@ -51,6 +51,7 @@ import coinLogoBTC from '../../assets/btc.png';
 import { FeeManager } from '../../components/FeeManager';
 import { useTranslation } from 'react-i18next';
 import {
+  BTC_FEE,
   EMPTY_STRING,
   TIME_MINUTES_3,
   TIME_MINUTES_5,
@@ -151,11 +152,12 @@ function TablePaginationActions(props: TablePaginationActionsProps) {
 
 export default function BitcoinWallet() {
   const { t } = useTranslation(['core']);
+  const theme = useTheme();
 
   const [walletInfoBtc, setWalletInfoBtc] = useState<any>({});
   const [_isLoadingWalletInfoBtc, setIsLoadingWalletInfoBtc] =
     useState<boolean>(false);
-  const [walletBalanceBtc, setWalletBalanceBtc] = useState<any>(null);
+  const [walletBalanceBtc, setWalletBalanceBtc] = useState<any>(0);
   const [isLoadingWalletBalanceBtc, setIsLoadingWalletBalanceBtc] =
     useState<boolean>(true);
   const [transactionsBtc, setTransactionsBtc] = useState<any>([]);
@@ -180,7 +182,7 @@ export default function BitcoinWallet() {
   );
 
   const btcFeeCalculated = +(+inputFee / 1000 / 1e8).toFixed(8);
-  const estimatedFeeCalculated = +btcFeeCalculated * 500;
+  const estimatedFeeCalculated = +btcFeeCalculated * BTC_FEE;
   const emptyRows =
     page > 0
       ? Math.max(0, (1 + page) * rowsPerPage - transactionsBtc.length)
@@ -196,22 +198,18 @@ export default function BitcoinWallet() {
     setBtcAmount(0);
     setBtcRecipient(EMPTY_STRING);
     setOpenBtcSend(true);
+    setAddressFormatError(false);
+    setOpenSendBtcError(false);
+    setWalletBalanceError(null);
   };
 
-  const disableCanSendBtc = () => {
-    if (btcAmount <= 0 || null || !btcAmount) {
-      return true;
-    }
-    if (addressFormatError || EMPTY_STRING) {
-      return true;
-    }
-    return false;
-  };
+  const disableCanSendBtc = () =>
+    btcAmount <= 0 || btcRecipient === EMPTY_STRING || addressFormatError;
 
   const handleRecipientChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const value = e.target.value;
+    const value = e.target.value.trim();
     const pattern =
       /^(1[1-9A-HJ-NP-Za-km-z]{33}|3[1-9A-HJ-NP-Za-km-z]{33}|bc1[02-9A-HJ-NP-Za-z]{39})$/;
 
@@ -227,6 +225,9 @@ export default function BitcoinWallet() {
   const handleCloseBtcSend = () => {
     setBtcAmount(0);
     setOpenBtcSend(false);
+    setAddressFormatError(false);
+    setOpenSendBtcError(false);
+    setWalletBalanceError(null);
   };
 
   const changeCopyBtcTxHash = async () => {
@@ -301,44 +302,53 @@ export default function BitcoinWallet() {
     }
   };
 
-  function computeBalanceFromTransactions(txs: any[]): number {
-    if (!Array.isArray(txs)) return 0;
-    let satoshis = 0;
-    for (const tx of txs) {
-      // Only count confirmed txs (those with a timestamp)
-      if (!tx?.timestamp) continue;
-      const inSat = (tx?.inputs || [])
-        .filter((i: any) => i?.addressInWallet)
-        .reduce((acc: number, cur: any) => acc + Number(cur?.amount || 0), 0);
-      const outSat = (tx?.outputs || [])
-        .filter((o: any) => o?.addressInWallet)
-        .reduce((acc: number, cur: any) => acc + Number(cur?.amount || 0), 0);
-      satoshis += outSat - inSat; // net effect on wallet
-    }
-    return +(satoshis / 1e8).toFixed(8);
-  }
-
   useEffect(() => {
-    getWalletInfoBtc();
-  }, []);
-
-  useEffect(() => {
-    const intervalgetTransactionsBtc = setInterval(() => {
-      getTransactionsBtc();
-    }, TIME_MINUTES_3);
-    getTransactionsBtc();
+    let intervalId: any;
+    (async () => {
+      await Promise.all([
+        getWalletInfoBtc(),
+        getWalletBalanceBtc(),
+        getTransactionsBtc(),
+      ]);
+      intervalId = setInterval(() => {
+        getWalletBalanceBtc();
+        getTransactionsBtc();
+      }, TIME_MINUTES_3);
+    })();
     return () => {
-      clearInterval(intervalgetTransactionsBtc);
+      if (intervalId) clearInterval(intervalId);
     };
   }, []);
 
+  const getWalletBalanceBtc = async () => {
+    try {
+      setIsLoadingWalletBalanceBtc(true);
+
+      const response = await qortalRequestWithTimeout(
+        {
+          action: 'GET_WALLET_BALANCE',
+          coin: Coin.BTC,
+        },
+        TIME_MINUTES_5
+      );
+
+      if (!response?.error) {
+        setWalletBalanceBtc(response);
+      }
+    } catch (error: any) {
+      setWalletBalanceBtc(null);
+      setWalletBalanceError(
+        error?.message ? String(error.message) : String(error)
+      );
+      console.error('ERROR GET BTC BALANCE', error);
+    } finally {
+      setIsLoadingWalletBalanceBtc(false);
+    }
+  };
+
   const getTransactionsBtc = async () => {
     try {
-      setLoadingRefreshBtc(true);
       setIsLoadingBtcTransactions(true);
-      setIsLoadingWalletBalanceBtc(true);
-      setWalletBalanceError(null);
-
       const responseBtcTransactions = await qortalRequestWithTimeout(
         {
           action: 'GET_USER_WALLET_TRANSACTIONS',
@@ -349,50 +359,16 @@ export default function BitcoinWallet() {
 
       if (responseBtcTransactions?.error) {
         setTransactionsBtc([]);
-        setWalletBalanceBtc(null);
-        setWalletBalanceError(
-          typeof responseBtcTransactions.error === 'string'
-            ? responseBtcTransactions.error
-            : t('core:message.error.loading_balance', {
-                postProcess: 'capitalizeFirstChar',
-              })
-        );
       } else {
         setTransactionsBtc(responseBtcTransactions);
-        const computed = computeBalanceFromTransactions(
-          responseBtcTransactions || []
-        );
-        setWalletBalanceBtc(computed);
-        setWalletBalanceError(null);
       }
     } catch (error: any) {
       setTransactionsBtc([]);
-      setWalletBalanceBtc(null);
-      setWalletBalanceError(
-        error?.message ? String(error.message) : String(error)
-      );
       console.error('ERROR GET BTC TRANSACTIONS', error);
     } finally {
       setIsLoadingBtcTransactions(false);
-      setIsLoadingWalletBalanceBtc(false);
-      setLoadingRefreshBtc(false);
     }
   };
-
-  useEffect(() => {
-    let intervalId: any;
-    (async () => {
-      await getWalletInfoBtc();
-      await getTransactionsBtc();
-      await getTransactionsBtc();
-      intervalId = setInterval(() => {
-        getTransactionsBtc();
-      }, TIME_MINUTES_3);
-    })();
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, []);
 
   const handleLoadingRefreshBtc = async () => {
     setLoadingRefreshBtc(true);
@@ -441,8 +417,259 @@ export default function BitcoinWallet() {
     }
   };
 
-  const BtcSendDialogPage = () => {
+  const tableLoader = () => {
     return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <Box
+          style={{
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <CircularProgress />
+        </Box>
+        <Box
+          style={{
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            marginTop: '20px',
+          }}
+        >
+          <Typography
+            variant="h5"
+            sx={{ color: 'primary.main', fontStyle: 'italic', fontWeight: 700 }}
+          >
+            {t('core:message.generic.loading_transactions', {
+              postProcess: 'capitalizeFirstChar',
+            })}
+          </Typography>
+        </Box>
+      </Box>
+    );
+  };
+
+  const transactionsTable = () => {
+    return (
+      <TableContainer component={Paper}>
+        <Table
+          stickyHeader
+          sx={{ width: '100%' }}
+          aria-label="transactions table"
+        >
+          <TableHead>
+            <TableRow>
+              <StyledTableCell align="left">
+                {t('core:sender', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:receiver', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:transaction_hash', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:total_amount', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:fee.fee', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+              <StyledTableCell align="left">
+                {t('core:time', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+              </StyledTableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {(rowsPerPage > 0
+              ? transactionsBtc.slice(
+                  page * rowsPerPage,
+                  page * rowsPerPage + rowsPerPage
+                )
+              : transactionsBtc
+            )?.map(
+              (
+                row: {
+                  inputs: {
+                    address: any;
+                    addressInWallet: boolean;
+                    amount: number;
+                  }[];
+                  outputs: {
+                    address: any;
+                    addressInWallet: boolean;
+                    amount: number;
+                  }[];
+                  txHash: string;
+                  totalAmount: any;
+                  feeAmount: any;
+                  timestamp: number;
+                },
+                k: Key
+              ) => (
+                <StyledTableRow key={k}>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    {row.inputs.map((input, index) => (
+                      <Box
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          color: input.addressInWallet
+                            ? undefined
+                            : theme.palette.info.main,
+                        }}
+                      >
+                        <span style={{ flex: 1, textAlign: 'left' }}>
+                          {input.address}
+                        </span>
+                        <span style={{ flex: 1, textAlign: 'right' }}>
+                          {(Number(input.amount) / 1e8).toFixed(8)}
+                        </span>
+                      </Box>
+                    ))}
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    {row.outputs.map((output, index) => (
+                      <Box
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          color: output.addressInWallet
+                            ? undefined
+                            : theme.palette.info.main,
+                        }}
+                      >
+                        <span style={{ flex: 1, textAlign: 'left' }}>
+                          {output.address}
+                        </span>
+                        <span style={{ flex: 1, textAlign: 'right' }}>
+                          {(Number(output.amount) / 1e8).toFixed(8)}
+                        </span>
+                      </Box>
+                    ))}
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    {cropString(row?.txHash)}
+                    <CustomWidthTooltip
+                      placement="top"
+                      title={
+                        copyBtcTxHash
+                          ? copyBtcTxHash
+                          : t('core:action.copy_hash', {
+                              hash: row?.txHash,
+                              postProcess: 'capitalizeFirstChar',
+                            })
+                      }
+                    >
+                      <IconButton
+                        aria-label="copy"
+                        size="small"
+                        onClick={() => {
+                          navigator.clipboard.writeText(row?.txHash);
+                          changeCopyBtcTxHash();
+                        }}
+                      >
+                        <CopyAllTwoTone fontSize="small" />
+                      </IconButton>
+                    </CustomWidthTooltip>
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    {row?.totalAmount > 0 ? (
+                      <Box sx={{ color: theme.palette.success.main }}>
+                        +{(Number(row?.totalAmount) / 1e8).toFixed(8)}
+                      </Box>
+                    ) : (
+                      <Box sx={{ color: theme.palette.error.main }}>
+                        {(Number(row?.totalAmount) / 1e8).toFixed(8)}
+                      </Box>
+                    )}
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="right">
+                    {row?.totalAmount <= 0 ? (
+                      <Box sx={{ color: theme.palette.error.main }}>
+                        -{(Number(row?.feeAmount) / 1e8).toFixed(8)}
+                      </Box>
+                    ) : (
+                      <Box style={{ color: 'grey' }}>
+                        -{(Number(row?.feeAmount) / 1e8).toFixed(8)}
+                      </Box>
+                    )}
+                  </StyledTableCell>
+                  <StyledTableCell style={{ width: 'auto' }} align="left">
+                    <CustomWidthTooltip
+                      placement="top"
+                      title={
+                        row?.timestamp
+                          ? new Date(row?.timestamp).toLocaleString()
+                          : t('core:message.generic.waiting_confirmation', {
+                              postProcess: 'capitalizeFirstChar',
+                            })
+                      }
+                    >
+                      <Box>
+                        {row?.timestamp
+                          ? epochToAgo(row?.timestamp)
+                          : t('core:message.generic.unconfirmed_transaction', {
+                              postProcess: 'capitalizeFirstChar',
+                            })}
+                      </Box>
+                    </CustomWidthTooltip>
+                  </StyledTableCell>
+                </StyledTableRow>
+              )
+            )}
+            {emptyRows > 0 && (
+              <TableRow style={{ height: 53 * emptyRows }}>
+                <TableCell colSpan={6} />
+              </TableRow>
+            )}
+          </TableBody>
+          <TableFooter sx={{ width: '100%' }}>
+            <TableRow>
+              <TablePagination
+                labelRowsPerPage={t('core:rows_per_page', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
+                rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
+                colSpan={6}
+                count={transactionsBtc.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                slotProps={{
+                  select: {
+                    inputProps: {
+                      'aria-label': 'rows per page',
+                    },
+                    native: true,
+                  },
+                }}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                ActionsComponent={TablePaginationActions}
+              />
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </TableContainer>
+    );
+  };
+
+  return (
+    <Box sx={{ width: '100%', mt: 2 }}>
       <Dialog
         fullScreen
         open={openBtcSend}
@@ -567,9 +794,9 @@ export default function BitcoinWallet() {
               aria-label="send-btc"
               onClick={sendBtcRequest}
               sx={{
-                backgroundColor: '#05a2e4',
+                backgroundColor: 'action.main',
                 color: 'white',
-                '&:hover': { backgroundColor: '#02648d' },
+                '&:hover': { backgroundColor: 'action.hover' },
               }}
             >
               {t('core:action.send', {
@@ -611,7 +838,7 @@ export default function BitcoinWallet() {
             ) : walletBalanceError ? (
               walletBalanceError
             ) : (
-              walletBalanceBtc.toFixed(8) + ' BTC'
+              walletBalanceBtc + ' BTC'
             )}
           </Typography>
         </Box>
@@ -645,7 +872,7 @@ export default function BitcoinWallet() {
               if (newMaxBtcAmount < 0) {
                 return Number(0.0) + ' BTC';
               } else {
-                return newMaxBtcAmount.toFixed(8) + ' BTC';
+                return newMaxBtcAmount + ' BTC';
               }
             })()}
           </Typography>
@@ -665,11 +892,15 @@ export default function BitcoinWallet() {
         <Box
           sx={{
             display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginTop: '20px',
             flexDirection: 'column',
-            '& .MuiTextField-root': { width: '50ch' },
+            alignItems: 'stretch',
+            justifyContent: 'center',
+            gap: 2,
+            mt: 2.5,
+            mx: 'auto',
+            width: '100%',
+            maxWidth: 420,
+            px: { xs: 2, sm: 1 },
           }}
         >
           <NumericFormat
@@ -681,10 +912,14 @@ export default function BitcoinWallet() {
             valueIsNumericString
             variant="outlined"
             label="Amount (BTC)"
+            fullWidth
             isAllowed={(values) => {
               const maxBtcCoin = +walletBalanceBtc - estimatedFeeCalculated;
               const { formattedValue, floatValue } = values;
-              return formattedValue === EMPTY_STRING || (floatValue ?? 0) <= maxBtcCoin;
+              return (
+                formattedValue === EMPTY_STRING ||
+                (floatValue ?? 0) <= maxBtcCoin
+              );
             }}
             onValueChange={(values) => {
               setBtcAmount(values.floatValue ?? 0);
@@ -701,6 +936,7 @@ export default function BitcoinWallet() {
             value={btcRecipient}
             onChange={handleRecipientChange}
             error={addressFormatError}
+            fullWidth
             helperText={
               addressFormatError
                 ? t('core:message.error.bitcoin_address_invalid', {
@@ -714,258 +950,7 @@ export default function BitcoinWallet() {
         </Box>
         <FeeManager coin="BTC" onChange={setInputFee} />
       </Dialog>
-    );
-  };
 
-  const tableLoader = () => {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap' }}>
-        <Box
-          style={{
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          <CircularProgress />
-        </Box>
-        <Box
-          style={{
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            marginTop: '20px',
-          }}
-        >
-          <Typography
-            variant="h5"
-            sx={{ color: 'primary.main', fontStyle: 'italic', fontWeight: 700 }}
-          >
-            {t('core:message.generic.loading_transactions', {
-              postProcess: 'capitalizeFirstChar',
-            })}
-          </Typography>
-        </Box>
-      </Box>
-    );
-  };
-
-  const transactionsTable = () => {
-    return (
-      <TableContainer component={Paper}>
-        <Table
-          stickyHeader
-          sx={{ width: '100%' }}
-          aria-label="transactions table"
-        >
-          <TableHead>
-            <TableRow>
-              <StyledTableCell align="left">
-                {t('core:sender', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:receiver', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:transaction_hash', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:total_amount', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:fee.fee', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-              <StyledTableCell align="left">
-                {t('core:time', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </StyledTableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {(rowsPerPage > 0
-              ? transactionsBtc.slice(
-                  page * rowsPerPage,
-                  page * rowsPerPage + rowsPerPage
-                )
-              : transactionsBtc
-            )?.map(
-              (
-                row: {
-                  inputs: {
-                    address: any;
-                    addressInWallet: boolean;
-                    amount: number;
-                  }[];
-                  outputs: {
-                    address: any;
-                    addressInWallet: boolean;
-                    amount: number;
-                  }[];
-                  txHash: string;
-                  totalAmount: any;
-                  feeAmount: any;
-                  timestamp: number;
-                },
-                k: Key
-              ) => (
-                <StyledTableRow key={k}>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    {row.inputs.map((input, index) => (
-                      <Box
-                        key={index}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          color: input.addressInWallet ? undefined : 'grey',
-                        }}
-                      >
-                        <span style={{ flex: 1, textAlign: 'left' }}>
-                          {input.address}
-                        </span>
-                        <span style={{ flex: 1, textAlign: 'right' }}>
-                          {(Number(input.amount) / 1e8).toFixed(8)}
-                        </span>
-                      </Box>
-                    ))}
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    {row.outputs.map((output, index) => (
-                      <Box
-                        key={index}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          color: output.addressInWallet ? undefined : 'grey',
-                        }}
-                      >
-                        <span style={{ flex: 1, textAlign: 'left' }}>
-                          {output.address}
-                        </span>
-                        <span style={{ flex: 1, textAlign: 'right' }}>
-                          {(Number(output.amount) / 1e8).toFixed(8)}
-                        </span>
-                      </Box>
-                    ))}
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    {cropString(row?.txHash)}
-                    <CustomWidthTooltip
-                      placement="top"
-                      title={
-                        copyBtcTxHash
-                          ? copyBtcTxHash
-                          : t('core:action.copy_hash', {
-                              hash: row?.txHash,
-                              postProcess: 'capitalizeFirstChar',
-                            })
-                      }
-                    >
-                      <IconButton
-                        aria-label="copy"
-                        size="small"
-                        onClick={() => {
-                          (navigator.clipboard.writeText(row?.txHash),
-                            changeCopyBtcTxHash());
-                        }}
-                      >
-                        <CopyAllTwoTone fontSize="small" />
-                      </IconButton>
-                    </CustomWidthTooltip>
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    {row?.totalAmount > 0 ? (
-                      <Box style={{ color: '#66bb6a' }}>
-                        +{(Number(row?.totalAmount) / 1e8).toFixed(8)}
-                      </Box>
-                    ) : (
-                      <Box style={{ color: '#f44336' }}>
-                        {(Number(row?.totalAmount) / 1e8).toFixed(8)}
-                      </Box>
-                    )}
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="right">
-                    {row?.totalAmount <= 0 ? (
-                      <Box style={{ color: '#f44336' }}>
-                        -{(Number(row?.feeAmount) / 1e8).toFixed(8)}
-                      </Box>
-                    ) : (
-                      <Box style={{ color: 'grey' }}>
-                        -{(Number(row?.feeAmount) / 1e8).toFixed(8)}
-                      </Box>
-                    )}
-                  </StyledTableCell>
-                  <StyledTableCell style={{ width: 'auto' }} align="left">
-                    <CustomWidthTooltip
-                      placement="top"
-                      title={
-                        row?.timestamp
-                          ? new Date(row?.timestamp).toLocaleString()
-                          : t('core:message.generic.waiting_confirmation', {
-                              postProcess: 'capitalizeFirstChar',
-                            })
-                      }
-                    >
-                      <Box>
-                        {row?.timestamp
-                          ? epochToAgo(row?.timestamp)
-                          : t('core:message.generic.unconfirmed_transaction', {
-                              postProcess: 'capitalizeFirstChar',
-                            })}
-                      </Box>
-                    </CustomWidthTooltip>
-                  </StyledTableCell>
-                </StyledTableRow>
-              )
-            )}
-            {emptyRows > 0 && (
-              <TableRow style={{ height: 53 * emptyRows }}>
-                <TableCell colSpan={6} />
-              </TableRow>
-            )}
-          </TableBody>
-          <TableFooter sx={{ width: '100%' }}>
-            <TableRow>
-              <TablePagination
-                labelRowsPerPage={t('core:rows_per_page', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-                rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
-                colSpan={5}
-                count={transactionsBtc.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                slotProps={{
-                  select: {
-                    inputProps: {
-                      'aria-label': 'rows per page',
-                    },
-                    native: true,
-                  },
-                }}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                ActionsComponent={TablePaginationActions}
-              />
-            </TableRow>
-          </TableFooter>
-        </Table>
-      </TableContainer>
-    );
-  };
-
-  const BtcAddressBookDialogPage = () => {
-    return (
       <DialogGeneral
         aria-labelledby="btc-electrum-servers"
         open={openBtcAddressBook}
@@ -983,13 +968,6 @@ export default function BitcoinWallet() {
           </Typography>
         </DialogContent>
       </DialogGeneral>
-    );
-  };
-
-  return (
-    <Box sx={{ width: '100%', mt: 2 }}>
-      {BtcSendDialogPage()}
-      {BtcAddressBookDialogPage()}
 
       <WalletCard sx={{ p: { xs: 2, md: 3 }, width: '100%' }}>
         <Grid container rowSpacing={{ xs: 2, md: 3 }} columnSpacing={2}>
@@ -1063,7 +1041,7 @@ export default function BitcoinWallet() {
                   <Typography variant="h5" sx={{ fontWeight: 700 }}>
                     {walletBalanceError
                       ? walletBalanceError
-                      : walletBalanceBtc?.toFixed(8) + ' BTC'}
+                      : walletBalanceBtc + ' BTC'}
                   </Typography>
                 </Grid>
 
@@ -1101,16 +1079,23 @@ export default function BitcoinWallet() {
                     >
                       {walletInfoBtc?.address}
                     </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={() =>
-                        navigator.clipboard.writeText(
-                          walletInfoBtc?.address ?? EMPTY_STRING
-                        )
-                      }
+                    <CustomWidthTooltip
+                      placement="top"
+                      title={t('core:action.copy_address', {
+                        postProcess: 'capitalizeFirstChar',
+                      })}
                     >
-                      <CopyAllTwoTone fontSize="small" />
-                    </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          navigator.clipboard.writeText(
+                            walletInfoBtc?.address ?? EMPTY_STRING
+                          )
+                        }
+                      >
+                        <CopyAllTwoTone fontSize="small" />
+                      </IconButton>
+                    </CustomWidthTooltip>
                   </Box>
                 </Grid>
 

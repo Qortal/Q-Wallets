@@ -52,17 +52,6 @@ export default function AppLayout() {
     return seg || '/';
   }, [location.pathname]);
 
-  const getIsUsingGateway = async () => {
-    try {
-      const res = await qortalRequest({
-        action: 'IS_USING_PUBLIC_NODE',
-      });
-      setIsUsingGateway(res);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
   async function getNodeInfo() {
     try {
       const nodeInfo = await qortalRequest({
@@ -78,7 +67,26 @@ export default function AppLayout() {
   }
 
   useEffect(() => {
-    getIsUsingGateway();
+    let isMounted = true;
+
+    const fetchGatewayStatus = async () => {
+      try {
+        const res = await qortalRequest({
+          action: 'IS_USING_PUBLIC_NODE',
+        });
+        if (isMounted) {
+          setIsUsingGateway(res);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchGatewayStatus();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -105,12 +113,18 @@ export default function AppLayout() {
       isUsingGateway: isUsingGateway,
       nodeInfo: nodeInfo,
     };
-    setWalletState?.(session);
+    if (setWalletState) {
+      setWalletState(session);
+    } else {
+      console.error('setWalletState is not available in wallet context');
+    }
   }, [address, avatarUrl, isUsingGateway, name, nodeInfo, setWalletState]);
 
   type NavHeader = { kind: 'header'; title: string };
   type NavSegment = { segment: string; title: string; icon: React.ReactNode };
   type Navigation = Array<NavHeader | NavSegment>;
+
+  const coinStyle = { width: 24, height: 'auto' } as const;
 
   const NAVIGATION: Navigation = [
     {
@@ -120,49 +134,48 @@ export default function AppLayout() {
     {
       segment: 'qortal',
       title: t('core:coins.qortal', { postProcess: 'capitalizeFirstChar' }),
-      icon: <img src={qort} style={{ width: 24, height: 'auto' }} />,
+      icon: <img src={qort} style={coinStyle} />,
     },
     {
       segment: 'litecoin',
       title: t('core:coins.litecoin', { postProcess: 'capitalizeFirstChar' }),
-      icon: <img src={ltc} style={{ width: 24, height: 'auto' }} />,
+      icon: <img src={ltc} style={coinStyle} />,
     },
     {
       segment: 'bitcoin',
       title: t('core:coins.bitcoin', { postProcess: 'capitalizeFirstChar' }),
-      icon: <img src={btc} style={{ width: 24, height: 'auto' }} />,
+      icon: <img src={btc} style={coinStyle} />,
     },
     {
       segment: 'dogecoin',
       title: t('core:coins.dogecoin', { postProcess: 'capitalizeFirstChar' }),
-      icon: <img src={doge} style={{ width: 24, height: 'auto' }} />,
+      icon: <img src={doge} style={coinStyle} />,
     },
     {
       segment: 'digibyte',
       title: t('core:coins.digibyte', { postProcess: 'capitalizeFirstChar' }),
-      icon: <img src={dgb} style={{ width: 24, height: 'auto' }} />,
+      icon: <img src={dgb} style={coinStyle} />,
     },
     {
       segment: 'ravencoin',
       title: t('core:coins.ravencoin', { postProcess: 'capitalizeFirstChar' }),
-      icon: <img src={rvn} style={{ width: 24, height: 'auto' }} />,
+      icon: <img src={rvn} style={coinStyle} />,
     },
     {
       segment: 'piratechain',
       title: t('core:coins.piratechain', {
         postProcess: 'capitalizeFirstChar',
       }),
-      icon: <img src={arrr} style={{ width: 24, height: 'auto' }} />,
+      icon: <img src={arrr} style={coinStyle} />,
     },
   ];
 
-  const drawerWidth = 115;
+  const drawerWidth = isMobile ? 120 : 140;
 
   const drawerSx = {
     width: drawerWidth,
     flexShrink: 0,
     '& .MuiDrawer-paper': {
-      alignItems: 'center',
       boxSizing: 'border-box',
       display: 'flex',
       flexDirection: 'column',
@@ -208,12 +221,11 @@ export default function AppLayout() {
             selectedSegment === item.segment ||
             (selectedSegment === '/' && item.segment === '/');
           return (
-            <ListItem key={item.segment} disablePadding sx={{ justifyContent: 'center' }}>
+            <ListItem key={item.segment} disablePadding>
               <ListItemButton
                 onClick={() => handleNavigate(item.segment)}
                 selected={isSelected}
                 sx={{
-                  justifyContent: 'center',
                   py: 2,
                   minHeight: 56,
                   '&.Mui-selected': (theme) => ({
@@ -233,7 +245,6 @@ export default function AppLayout() {
                   <Box
                     sx={{
                       fontSize: 11,
-                      maxWidth: 70,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',

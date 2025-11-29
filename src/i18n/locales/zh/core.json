@@ -7,7 +7,7 @@
     "change_server": "更换服务器",
     "close": "关闭",
     "copy_address": "复制地址",
-    "copy hash": "复制哈希：{{ hash }}",
+    "copy_hash": "复制哈希：{{ hash }}",
     "force_sync": "强制同步",
     "refresh": "刷新",
     "remove": "移除",
@@ -79,6 +79,7 @@
       "sending_fee": "当前发送手续费为 {{ quantity }} {{ coin }}。",
       "sent_transaction": "已成功发送 {{ coin }} 交易。",
       "unconfirmed_translaction": "未确认",
+      "validating": "正在验证...",
       "waiting_confirmation": "等待确认...",
       "welcome": "欢迎使用 <brand>Qortal Wallets</brand>"
     },
@@ -96,6 +97,8 @@
       "update_group": "新描述：{{ newDescription }} ID：{{ id }}"
     },
     "error": {
+      "amount_exceeds_balance": "允许的最大金额: {{ maxAmount }}",
+      "amount_positive": "金额必须大于 0",
       "bitcoin_address_invalid": "无效的 BTC 地址",
       "digibyte_address_invalid": "无效的 DGB 地址",
       "doge_address_invalid": "无效的 DOGE 地址",
@@ -105,6 +108,10 @@
       "pirate_chain_gateway": "无法通过公共节点使用 Pirate Chain 钱包。请使用本地节点。",
       "pirate_chain_no_server": "无法连接到 Pirate Chain 的 Lightwallet 服务器。",
       "ravencoin_address_invalid": "无效的 RVN 地址",
+      "recipient_lookup_failed": "查询失败",
+      "recipient_not_found": "未找到收件人",
+      "recipient_required": "收件人不能为空",
+      "recipient_too_short": "收件人地址过短",      
       "something_went_wrong": "发生错误。请重试。"
     }
   },
