@@ -23,10 +23,11 @@ export const validateDogeAddress = (address: string): boolean => {
 /**
  * Validate Litecoin (LTC) address format
  * Supports P2PKH (L...), P2SH (M...), and Bech32 (ltc1...) addresses
+ * Bech32 uses charset: qpzry9x8gf2tvdw0s3jn54khce6mua7l (excludes 1, b, i, o)
  */
 export const validateLtcAddress = (address: string): boolean => {
   const pattern =
-    /^(L[1-9A-HJ-NP-Za-km-z]{33}|M[1-9A-HJ-NP-Za-km-z]{33}|ltc1[2-9A-HJ-NP-Za-z]{39})$/;
+    /^(L[1-9A-HJ-NP-Za-km-z]{33}|M[1-9A-HJ-NP-Za-km-z]{33}|ltc1[ac-hj-np-z02-9]{39,59})$/;
   return pattern.test(address.trim());
 };
 
