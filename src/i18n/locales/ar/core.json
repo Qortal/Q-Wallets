@@ -8,6 +8,7 @@
     "close": "إغلاق",
     "copy_address": "نسخ العنوان",
     "copy_hash": "نسخ التجزئة: {{ hash }}",
+    "double_click_addressbook": "انقر نقرًا مزدوجًا للإضافة إلى دفتر العناوين\n{{ address }}",
     "force_sync": "فرض المزامنة",
     "refresh": "تحديث",
     "remove": "إزالة",
@@ -19,6 +20,31 @@
   },
   "address": "العنوان:",
   "address_book": "دفتر العناوين",
+  "address_book_title": "دفتر العناوين - {{coinType}}",
+  "address_book_empty": "لا توجد عناوين محفوظة بعد",
+  "address_book_add_new": "إضافة عنوان جديد",
+  "address_book_search": "البحث حسب الاسم أو العنوان أو الملاحظة",
+  "address_book_name": "الاسم",
+  "address_book_address": "العنوان",
+  "address_book_note": "ملاحظة",
+  "address_book_actions": "إجراءات",
+  "address_book_edit": "تحرير",
+  "address_book_delete": "حذف",
+  "address_book_use": "استخدام العنوان",
+  "address_book_save": "حفظ",
+  "address_book_cancel": "إلغاء",
+  "address_book_delete_confirm": "هل أنت متأكد من رغبتك في حذف {{name}}؟",
+  "address_book_name_required": "الاسم مطلوب",
+  "address_book_name_max_length": "يجب أن يكون الاسم 50 حرفًا أو أقل",
+  "address_book_address_required": "العنوان مطلوب",
+  "address_book_address_invalid": "تنسيق عنوان {{coinType}} غير صالح",
+  "address_book_note_max_length": "يجب أن تكون الملاحظة {{ max_note }} حرفًا أو أقل",
+  "address_book_added": "تمت إضافة العنوان بنجاح",
+  "address_book_updated": "تم تحديث العنوان بنجاح",
+  "address_book_deleted": "تم حذف العنوان بنجاح",
+  "address_book_copy": "نسخ العنوان",
+  "address_book_copied": "تم نسخ العنوان إلى الحافظة",
+  "address_book_sync_qdn": "حفظ في QDN",
   "amount": "المبلغ",
   "balance": "الرصيد:",
   "balance_available": "الرصيد المتاح:",
@@ -96,6 +122,7 @@
       "update_group": "الوصف الجديد: {{ newDescription }} المعرف: {{ id }}"
     },
     "error": {
+      "address_already_exists": "العنوان موجود بالفعل في دفتر العناوين",
       "amount_exceeds_balance": "الحد الأقصى المسموح: {{ maxAmount }}",
       "amount_positive": "يجب أن يكون المبلغ أكبر من 0",
       "bitcoin_address_invalid": "عنوان BTC غير صالح",
@@ -112,6 +139,9 @@
       "recipient_required": "المستلم مطلوب",
       "recipient_too_short": "عنوان المستلم قصير جدًا",
       "something_went_wrong": "حدث خطأ ما. يُرجى المحاولة مرة أخرى."
+    },
+    "success": {
+      "qdn_sync": "تمت مزامنة دفتر العناوين {{coinType}} بنجاح مع QDN"
     }
   },
   "page": {

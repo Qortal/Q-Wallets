@@ -8,6 +8,7 @@
     "close": "Schließen",
     "copy_address": "Adresse kopieren",
     "copy_hash": "Hash kopieren: {{ hash }}",
+    "double_click_addressbook": "Doppelklick zum Adressbuch hinzufügen\n{{ address }}",
     "force_sync": "Synchronisierung erzwingen",
     "refresh": "Aktualisieren",
     "remove": "Entfernen",
@@ -19,6 +20,31 @@
   },
   "address": "Adresse:",
   "address_book": "Adressbuch",
+  "address_book_title": "Adressbuch - {{coinType}}",
+  "address_book_empty": "noch keine Adressen gespeichert",
+  "address_book_add_new": "neue Adresse hinzufügen",
+  "address_book_search": "nach Name, Adresse oder Notiz suchen",
+  "address_book_name": "Name",
+  "address_book_address": "Adresse",
+  "address_book_note": "Notiz",
+  "address_book_actions": "Aktionen",
+  "address_book_edit": "bearbeiten",
+  "address_book_delete": "löschen",
+  "address_book_use": "Adresse verwenden",
+  "address_book_save": "speichern",
+  "address_book_cancel": "abbrechen",
+  "address_book_delete_confirm": "Möchten Sie {{name}} wirklich löschen?",
+  "address_book_name_required": "Name ist erforderlich",
+  "address_book_name_max_length": "Name darf maximal 50 Zeichen lang sein",
+  "address_book_address_required": "Adresse ist erforderlich",
+  "address_book_address_invalid": "Ungültiges {{coinType}} Adressformat",
+  "address_book_note_max_length": "Notiz darf maximal {{ max_note }} Zeichen lang sein",
+  "address_book_added": "Adresse erfolgreich hinzugefügt",
+  "address_book_updated": "Adresse erfolgreich aktualisiert",
+  "address_book_deleted": "Adresse erfolgreich gelöscht",
+  "address_book_copy": "Adresse kopieren",
+  "address_book_copied": "Adresse in Zwischenablage kopiert",
+  "address_book_sync_qdn": "auf QDN speichern",
   "amount": "Betrag",
   "balance": "Guthaben:",
   "balance_available": "Verfügbares Guthaben:",
@@ -96,6 +122,7 @@
       "update_group": "Neue Beschreibung: {{ newDescription }} ID: {{ id }}"
     },
     "error": {
+      "address_already_exists": "Die Adresse existiert bereits im Adressbuch",
       "amount_exceeds_balance": "Maximal zulässig: {{ maxAmount }}",
       "amount_positive": "Der Betrag muss größer als 0 sein",
       "bitcoin_address_invalid": "Ungültige BTC-Adresse",
@@ -112,6 +139,9 @@
       "recipient_required": "Empfänger erforderlich",
       "recipient_too_short": "Empfängeradresse ist zu kurz",
       "something_went_wrong": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+    },
+    "success": {
+      "qdn_sync": "{{coinType}} Adressbuch erfolgreich mit QDN synchronisiert"
     }
   },
   "page": {

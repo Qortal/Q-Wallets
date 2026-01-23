@@ -8,6 +8,7 @@
     "close": "閉じる",
     "copy_address": "アドレスをコピー",
     "copy_hash": "ハッシュをコピー: {{ hash }}",
+    "double_click_addressbook": "ダブルクリックでアドレス帳に追加\n{{ address }}",
     "force_sync": "同期を強制",
     "refresh": "更新",
     "remove": "削除",
@@ -19,6 +20,31 @@
   },
   "address": "アドレス:",
   "address_book": "アドレス帳",
+  "address_book_title": "アドレス帳 - {{coinType}}",
+  "address_book_empty": "まだアドレスが保存されていません",
+  "address_book_add_new": "新しいアドレスを追加",
+  "address_book_search": "名前、アドレス、またはメモで検索",
+  "address_book_name": "名前",
+  "address_book_address": "アドレス",
+  "address_book_note": "メモ",
+  "address_book_actions": "操作",
+  "address_book_edit": "編集",
+  "address_book_delete": "削除",
+  "address_book_use": "アドレスを使用",
+  "address_book_save": "保存",
+  "address_book_cancel": "キャンセル",
+  "address_book_delete_confirm": "{{name}}を削除してもよろしいですか？",
+  "address_book_name_required": "名前は必須です",
+  "address_book_name_max_length": "名前は50文字以内にしてください",
+  "address_book_address_required": "アドレスは必須です",
+  "address_book_address_invalid": "無効な{{coinType}}アドレス形式",
+  "address_book_note_max_length": "メモは{{ max_note }}文字以内にしてください",
+  "address_book_added": "アドレスが正常に追加されました",
+  "address_book_updated": "アドレスが正常に更新されました",
+  "address_book_deleted": "アドレスが正常に削除されました",
+  "address_book_copy": "アドレスをコピー",
+  "address_book_copied": "アドレスをクリップボードにコピーしました",
+  "address_book_sync_qdn": "QDNに保存",
   "amount": "金額",
   "balance": "残高:",
   "balance_available": "利用可能残高:",
@@ -97,6 +123,7 @@
       "update_group": "新しい説明: {{ newDescription }} ID: {{ id }}"
     },
     "error": {
+      "address_already_exists": "アドレスは既にアドレス帳に存在します",
       "amount_exceeds_balance": "最大許可額: {{ maxAmount }}",
       "amount_positive": "金額は0より大きくなければなりません",
       "bitcoin_address_invalid": "無効な BTC アドレス",
@@ -113,6 +140,9 @@
       "recipient_required": "受取人は必須です",
       "recipient_too_short": "受取人のアドレスが短すぎます",
       "something_went_wrong": "問題が発生しました。もう一度お試しください。"
+    },
+    "success": {
+      "qdn_sync": "{{coinType}}アドレス帳がQDNに正常に同期されました"
     }
   },
   "page": {

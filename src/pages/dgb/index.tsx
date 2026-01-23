@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 import { epochToAgo, timeoutDelay, cropString, copyToClipboard } from '../../common/functions';
+import { AddressBookDialog } from '../../components/AddressBook/AddressBookDialog';
 import { useTheme } from '@mui/material/styles';
 import {
   Alert,
@@ -62,7 +63,6 @@ import {
 } from '../../common/constants';
 import {
   CustomWidthTooltip,
-  DialogGeneral,
   SlideTransition,
   StyledTableCell,
   StyledTableRow,
@@ -72,6 +72,7 @@ import {
   WalletCard,
 } from '../../styles/page-styles';
 import { Coin } from 'qapp-core';
+import { validateDgbAddress } from '../../utils/addressValidation';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -201,15 +202,41 @@ export default function DigibyteWallet() {
   const [openSendDgbError, setOpenSendDgbError] = useState(false);
   const [openDgbAddressBook, setOpenDgbAddressBook] = useState(false);
 
+  const maxSendableDbgCoin = () => {
+    // manage the correct round up
+    const value = (walletBalanceDgb - (dgbFee * 1000) / 1e8)
+      .toFixed(DECIMAL_ROUND_UP);
+    const [integer, decimal = ''] = value.split('.');
+    const truncated = decimal
+      .substring(0, DECIMAL_ROUND_UP)
+      .padEnd(DECIMAL_ROUND_UP, '0');
+    let truncatedMaxSendableDgbCoin: number = parseFloat(
+      `${integer}.${truncated}`
+    );
+    return truncatedMaxSendableDgbCoin;
+  };
+
   const emptyRows =
     page > 0
       ? Math.max(0, (1 + page) * rowsPerPage - transactionsDgb.length)
       : 0;
 
-  const handleOpenAddressBook = async () => {
+  const handleOpenAddressBook = () => {
     setOpenDgbAddressBook(true);
-    await new Promise((resolve) => setTimeout(resolve, TIME_SECONDS_2));
+  };
+
+  const handleCloseAddressBook = () => {
     setOpenDgbAddressBook(false);
+  };
+
+  const handleSelectAddress = (address: string, _name: string) => {
+    setDgbRecipient(address);
+    setDgbAmount(0);
+    setDgbFee(DGB_FEE);
+    setOpenDgbAddressBook(false);
+    setOpenDgbSend(true);
+    setAddressFormatError(false);
+    setOpenSendDgbError(false);
   };
 
   const handleOpenDgbSend = () => {
@@ -228,13 +255,10 @@ export default function DigibyteWallet() {
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const value = e.target.value.trim();
-    const pattern =
-      /^(D[1-9A-HJ-NP-Za-km-z]{33}|S[1-9A-HJ-NP-Za-km-z]{33}|dgb1[2-9A-HJ-NP-Za-z]{39})$/;
-
     setDgbRecipient(value);
-
-    if (pattern.test(value) || value === EMPTY_STRING) {
-      setAddressFormatError(false);
+    
+    if (validateDgbAddress(value) || value === EMPTY_STRING) {
+      setAddressFormatError(false);      
     } else {
       setAddressFormatError(true);
     }
@@ -398,14 +422,11 @@ export default function DigibyteWallet() {
     setLoadingRefreshDgb(false);
   };
 
-  const handleSendMaxDgb = () => {
-    const maxDgbAmount = parseFloat(
-      (walletBalanceDgb - (dgbFee * 1000) / 1e8).toFixed(DECIMAL_ROUND_UP)
-    );
-    if (maxDgbAmount <= 0) {
+  const handleSendMaxDgb = () => {   
+    if (maxSendableDbgCoin() <= 0) {
       setDgbAmount(0);
     } else {
-      setDgbAmount(maxDgbAmount);
+      setDgbAmount(maxSendableDbgCoin());
     }
   };
 
@@ -1027,23 +1048,12 @@ export default function DigibyteWallet() {
         </Box>
       </Dialog>
 
-      <DialogGeneral
-        aria-labelledby="dgb-electrum-servers"
+      <AddressBookDialog
         open={openDgbAddressBook}
-        keepMounted={false}
-      >
-        <DialogContent>
-          <Typography
-            variant="h5"
-            align="center"
-            sx={{ color: 'text.primary', fontWeight: 700 }}
-          >
-            {t('core:message.generic.coming_soon', {
-              postProcess: 'capitalizeFirstChar',
-            })}
-          </Typography>
-        </DialogContent>
-      </DialogGeneral>
+        onClose={handleCloseAddressBook}
+        coinType={Coin.DGB}
+        onSelectAddress={handleSelectAddress}
+      />
 
       <WalletCard sx={{ p: { xs: 2, md: 3 }, width: '100%' }}>
         <Grid container rowSpacing={{ xs: 2, md: 3 }} columnSpacing={2}>

@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 import { epochToAgo, timeoutDelay, cropString, copyToClipboard } from '../../common/functions';
+import { AddressBookDialog } from '../../components/AddressBook/AddressBookDialog';
 import { useTheme } from '@mui/material/styles';
 import {
   Alert,
@@ -61,7 +62,6 @@ import {
 } from '../../common/constants';
 import {
   CustomWidthTooltip,
-  DialogGeneral,
   SlideTransition,
   StyledTableCell,
   StyledTableRow,
@@ -72,6 +72,7 @@ import {
 } from '../../styles/page-styles';
 import { FeeManager } from '../../components/FeeManager';
 import { Coin } from 'qapp-core';
+import { validateDogeAddress } from '../../utils/addressValidation';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -186,15 +187,35 @@ export default function DogecoinWallet() {
   const dogeFeeCalculated = +(+inputFee / 1000 / 1e8).toFixed(DECIMAL_ROUND_UP);
   const estimatedFeeCalculated = +dogeFeeCalculated * DOGE_FEE;
 
+  const maxSendableDogeCoin = () => {
+      // manage the correct round up
+      const value = (walletBalanceDoge - estimatedFeeCalculated).toString();
+      const [integer, decimal = ''] = value.split('.');
+      const truncated = decimal.substring(0, DECIMAL_ROUND_UP).padEnd(DECIMAL_ROUND_UP, '0');
+      let truncatedMaxSendableDogeCoin: number = parseFloat(`${integer}.${truncated}`);
+      return truncatedMaxSendableDogeCoin;
+    };
+
   const emptyRows =
     page > 0
       ? Math.max(0, (1 + page) * rowsPerPage - transactionsDoge.length)
       : 0;
 
-  const handleOpenAddressBook = async () => {
+  const handleOpenAddressBook = () => {
     setOpenDogeAddressBook(true);
-    await new Promise((resolve) => setTimeout(resolve, TIME_SECONDS_2));
+  };
+
+  const handleCloseAddressBook = () => {
     setOpenDogeAddressBook(false);
+  };
+
+  const handleSelectAddress = (address: string, _name: string) => {
+    setDogeRecipient(address);
+    setDogeAmount(0);
+    setOpenDogeAddressBook(false);
+    setOpenDogeSend(true);
+    setAddressFormatError(false);
+    setOpenSendDogeError(false);
   };
 
   const handleOpenDogeSend = () => {
@@ -212,11 +233,9 @@ export default function DogecoinWallet() {
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const value = e.target.value.trim();
-    const pattern = /^(D[1-9A-HJ-NP-Za-km-z]{33})$/;
-
     setDogeRecipient(value);
 
-    if (pattern.test(value) || value === EMPTY_STRING) {
+    if (validateDogeAddress(value) || value === EMPTY_STRING) {
       setAddressFormatError(false);
     } else {
       setAddressFormatError(true);
@@ -376,12 +395,11 @@ export default function DogecoinWallet() {
     setLoadingRefreshDoge(false);
   };
 
-  const handleSendMaxDoge = () => {
-    const maxDogeAmount = +walletBalanceDoge - estimatedFeeCalculated;
-    if (maxDogeAmount <= 0) {
+  const handleSendMaxDoge = () => {        
+    if (maxSendableDogeCoin() <= 0) {
       setDogeAmount(0);
     } else {
-      setDogeAmount(maxDogeAmount);
+      setDogeAmount(maxSendableDogeCoin());
     }
   };
 
@@ -953,23 +971,12 @@ export default function DogecoinWallet() {
         <FeeManager coin="DOGE" onChange={setInputFee} />
       </Dialog>
 
-      <DialogGeneral
-        aria-labelledby="doge-electrum-servers"
+      <AddressBookDialog
         open={openDogeAddressBook}
-        keepMounted={false}
-      >
-        <DialogContent>
-          <Typography
-            variant="h5"
-            align="center"
-            sx={{ color: 'text.primary', fontWeight: 700 }}
-          >
-            {t('core:message.generic.coming_soon', {
-              postProcess: 'capitalizeFirstChar',
-            })}
-          </Typography>
-        </DialogContent>
-      </DialogGeneral>
+        onClose={handleCloseAddressBook}
+        coinType={Coin.DOGE}
+        onSelectAddress={handleSelectAddress}
+      />
 
       <WalletCard sx={{ p: { xs: 2, md: 3 }, width: '100%' }}>
         <Grid container rowSpacing={{ xs: 2, md: 3 }} columnSpacing={2}>

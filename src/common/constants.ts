@@ -3,6 +3,9 @@ export const EMPTY_STRING: string = '';
 export const ONE_SPACE: string = ' ';
 
 // Number
+export const ADDRESSBOOK_NAME_LENGTH: number = 50;
+export const ADDRESSBOOK_NOTE_LENGTH: number = 200;
+export const ADDRESSBOOK_ROWS_PER_PAGE: number = 5;
 export const DECIMAL_ROUND_UP: number = 8;
 
 // QORT section

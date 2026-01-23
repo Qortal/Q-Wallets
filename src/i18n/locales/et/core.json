@@ -8,6 +8,7 @@
     "close": "Sulge",
     "copy_address": "Kopeeri aadress",
     "copy_hash": "Kopeeri räsi: {{ hash }}",
+    "double_click_addressbook": "topeltklõpsake aadressiraamatusse lisamiseks\n{{ address }}",
     "force_sync": "Sunni sünkroonimist",
     "refresh": "Värskenda",
     "remove": "Eemalda",
@@ -19,6 +20,31 @@
   },
   "address": "aadress:",
   "address_book": "aadressiraamat",
+  "address_book_title": "aadressiraamat - {{coinType}}",
+  "address_book_empty": "ühtegi aadressi pole veel salvestatud",
+  "address_book_add_new": "lisa uus aadress",
+  "address_book_search": "otsi nime, aadressi või märkuse järgi",
+  "address_book_name": "nimi",
+  "address_book_address": "aadress",
+  "address_book_note": "märkus",
+  "address_book_actions": "toimingud",
+  "address_book_edit": "muuda",
+  "address_book_delete": "kustuta",
+  "address_book_use": "kasuta aadressi",
+  "address_book_save": "salvesta",
+  "address_book_cancel": "tühista",
+  "address_book_delete_confirm": "kas olete kindel, et soovite kustutada {{name}}?",
+  "address_book_name_required": "nimi on kohustuslik",
+  "address_book_name_max_length": "nimi peab olema 50 tähemärki või vähem",
+  "address_book_address_required": "aadress on kohustuslik",
+  "address_book_address_invalid": "kehtetu {{coinType}} aadressi formaat",
+  "address_book_note_max_length": "märkus peab olema {{ max_note }} tähemärki või vähem",
+  "address_book_added": "aadress lisatud edukalt",
+  "address_book_updated": "aadress uuendatud edukalt",
+  "address_book_deleted": "aadress kustutatud edukalt",
+  "address_book_copy": "kopeeri aadress",
+  "address_book_copied": "aadress kopeeritud lõikelauale",
+  "address_book_sync_qdn": "salvesta QDN-i",
   "amount": "summa",
   "balance": "jääk:",
   "balance_available": "saadaval olev jääk:",
@@ -96,6 +122,7 @@
       "update_group": "uus kirjeldus: {{ newDescription }} ID: {{ id }}"
     },
     "error": {
+      "address_already_exists": "Aadress on aadressiraamatus juba olemas",
       "amount_exceeds_balance": "Maksimaalne lubatud: {{ maxAmount }}",
       "amount_positive": "Summa peab olema suurem kui 0",
       "bitcoin_address_invalid": "Kehtetu BTC-aadress",
@@ -112,6 +139,9 @@
       "recipient_required": "Saaja on kohustuslik",
       "recipient_too_short": "Saaja aadress on liiga lühike",
       "something_went_wrong": "Midagi läks valesti. Palun proovi uuesti."
+    },
+    "success": {
+      "qdn_sync": "{{coinType}} aadressiraamat edukalt sünkroonitud QDN-iga"
     }
   },
   "page": {

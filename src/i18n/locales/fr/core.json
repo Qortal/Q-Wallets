@@ -6,8 +6,9 @@
     "cancel": "Annuler",
     "change_server": "Changer de serveur",
     "close": "Fermer",
-    "copy_address": "Copier l’adresse",
+    "copy_address": "Copier l'adresse",
     "copy_hash": "Copier le hachage : {{ hash }}",
+    "double_click_addressbook": "double-cliquez pour ajouter au carnet d'adresses \n{{ address }}",
     "force_sync": "Forcer la synchronisation",
     "refresh": "Actualiser",
     "remove": "Supprimer",
@@ -18,7 +19,32 @@
     "transfer_coin": "Transférer {{ coin }}"
   },
   "address": "adresse :",
-  "address_book": "carnet d’adresses",
+  "address_book": "carnet d'adresses",
+  "address_book_title": "carnet d'adresses - {{coinType}}",
+  "address_book_empty": "aucune adresse enregistrée pour le moment",
+  "address_book_add_new": "ajouter une nouvelle adresse",
+  "address_book_search": "rechercher par nom, adresse ou note",
+  "address_book_name": "nom",
+  "address_book_address": "adresse",
+  "address_book_note": "note",
+  "address_book_actions": "actions",
+  "address_book_edit": "modifier",
+  "address_book_delete": "supprimer",
+  "address_book_use": "utiliser l'adresse",
+  "address_book_save": "enregistrer",
+  "address_book_cancel": "annuler",
+  "address_book_delete_confirm": "êtes-vous sûr de vouloir supprimer {{name}} ?",
+  "address_book_name_required": "le nom est obligatoire",
+  "address_book_name_max_length": "le nom doit contenir 50 caractères ou moins",
+  "address_book_address_required": "l'adresse est obligatoire",
+  "address_book_address_invalid": "format d'adresse {{coinType}} invalide",
+  "address_book_note_max_length": "la note doit contenir {{ max_note }} caractères ou moins",
+  "address_book_added": "adresse ajoutée avec succès",
+  "address_book_updated": "adresse mise à jour avec succès",
+  "address_book_deleted": "adresse supprimée avec succès",
+  "address_book_copy": "copier l'adresse",
+  "address_book_copied": "adresse copiée dans le presse-papiers",
+  "address_book_sync_qdn": "enregistrer sur QDN",
   "amount": "montant",
   "balance": "solde :",
   "balance_available": "solde disponible :",
@@ -96,6 +122,7 @@
       "update_group": "nouvelle description : {{ newDescription }} ID : {{ id }}"
     },
     "error": {
+      "address_already_exists": "L'adresse existe déjà dans le carnet d'adresses",
       "amount_exceeds_balance": "Montant maximum autorisé : {{ maxAmount }}",
       "amount_positive": "Le montant doit être supérieur à 0",
       "bitcoin_address_invalid": "Adresse BTC invalide",
@@ -111,7 +138,10 @@
       "recipient_not_found": "Destinataire introuvable",
       "recipient_required": "Destinataire requis",
       "recipient_too_short": "Adresse du destinataire trop courte",
-      "something_went_wrong": "Une erreur s’est produite. Veuillez réessayer."
+      "something_went_wrong": "Une erreur s'est produite. Veuillez réessayer."
+    },
+    "success": {
+      "qdn_sync": "carnet d'adresses {{coinType}} synchronisé avec succès sur QDN"
     }
   },
   "page": {

@@ -62,7 +62,7 @@ import {
   EMPTY_STRING,
   QORT_1_UNIT,
   TIME_MINUTES_1,
-  TIME_SECONDS_2,
+  
   TIME_SECONDS_3,
   TIME_SECONDS_4,
 } from '../../common/constants';
@@ -76,7 +76,6 @@ import {
 import WalletContext from '../../contexts/walletContext';
 import {
   CustomWidthTooltip,
-  DialogGeneral,
   SlideTransition,
   StyledTableCell,
   StyledTableRow,
@@ -86,6 +85,7 @@ import {
   WalletCard,
 } from '../../styles/page-styles';
 import { SearchTransactionsResponse } from '../../utils/Types.tsx';
+import { AddressBookDialog } from '../../components/AddressBook/AddressBookDialog';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -104,11 +104,11 @@ export const getPrimaryAccountName = async (address: string) => {
       qortalRequest({ action: 'GET_PRIMARY_NAME', address })
     );
     if (primaryName) addressToPrimaryName[address] = primaryName;
-    return primaryName ?? '';
+    return primaryName ?? EMPTY_STRING;
   } catch (e) {
     console.log(e);
   }
-  return '';
+  return EMPTY_STRING;
 };
 
 export const replaceAddressesWithNames = async (
@@ -148,7 +148,9 @@ export const replaceAddressesWithNames = async (
     return {
       ...d,
       creatorAddress,
+      creatorAddressOriginal: d.creatorAddress,
       recipient,
+      recipientOriginal: d.recipient,
     } as SearchTransactionsResponse;
   });
 };
@@ -249,6 +251,7 @@ export default function QortalWallet() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [openQortAddressBook, setOpenQortAddressBook] = useState(false);
+  const [addressBookPrefill, setAddressBookPrefill] = useState<{name: string, address: string} | null>(null);
   const [loadingRefreshQort, setLoadingRefreshQort] = useState(false);
   const [openQortSend, setOpenQortSend] = useState(false);
   const [openTxQortSubmit, setOpenTxQortSubmit] = useState(false);
@@ -267,7 +270,7 @@ export default function QortalWallet() {
   const maxSendableQortCoin = () => {
     // manage the correct round up
     const value = (walletBalanceQort - qortTxFee).toString();
-    const [integer, decimal = ''] = value.split('.');
+    const [integer, decimal = EMPTY_STRING] = value.split('.');
     const truncated = decimal.substring(0, DECIMAL_ROUND_UP).padEnd(DECIMAL_ROUND_UP, '0');
     let truncatedMaxSendableQortCoin: number = parseFloat(`${integer}.${truncated}`);
     return truncatedMaxSendableQortCoin;
@@ -306,10 +309,29 @@ export default function QortalWallet() {
   const emptyRowsAll =
     page > 0 ? Math.max(0, (1 + page) * rowsPerPage - allInfo?.length || 0) : 0;
 
-  const handleOpenAddressBook = async () => {
+  const handleOpenAddressBook = () => {
     setOpenQortAddressBook(true);
-    await new Promise((resolve) => setTimeout(resolve, TIME_SECONDS_2));
+  };
+
+  const handleOpenAddressBookWithData = (name: string, addressValue: string) => {
+    setAddressBookPrefill({ name, address: addressValue });
+    setOpenQortAddressBook(true);
+  };
+
+  const handleCloseAddressBook = () => {
     setOpenQortAddressBook(false);
+    setAddressBookPrefill(null);
+  };
+
+  const handleSelectAddress = (address: string, _name: string) => {
+    setQortRecipient(address);
+    setQortAmount(0);
+    setOpenQortAddressBook(false);
+    setOpenQortSend(true);
+    setAmountError(null);
+    setAmountTouched(false);
+    setRecipientError(null);
+    setRecipientTouched(true); // Trigger validation for QORT addresses
   };
 
   const handleChange = (_event: SyntheticEvent, newValue: string) => {
@@ -441,7 +463,6 @@ export default function QortalWallet() {
             signal: controller.signal,
           }).then(async (r) => {
             const json = await r.json();
-
             if (!json) {
               console.warn(`Invalid address format: ${qortRecipient}`);
               return { error: 'Invalid address' };
@@ -845,7 +866,7 @@ export default function QortalWallet() {
                       postProcess: 'capitalizeFirstChar',
                     })}
                   </StyledTableCell>
-                  <StyledTableCell align="center">
+                  <StyledTableCell align="left">
                     {t('core:type', {
                       postProcess: 'capitalizeFirstChar',
                     })}
@@ -891,8 +912,10 @@ export default function QortalWallet() {
                       approvalStatus: string;
                       blockHeight: number;
                       creatorAddress: string;
+                      creatorAddressOriginal?: string;
                       fee: number;
                       recipient: string;
+                      recipientOriginal?: string;
                       reference: string;
                       senderPublicKey: string;
                       signature: string;
@@ -954,7 +977,12 @@ export default function QortalWallet() {
                       <StyledTableCell style={{ width: 'auto' }} align="left">
                         {row?.type}
                       </StyledTableCell>
-                      <StyledTableCell style={{ width: 'auto' }} align="left">
+                      <StyledTableCell
+                        style={{ width: 'auto', cursor: 'pointer' }}
+                        align="left"
+                        title={t('core:action.double_click_addressbook', { address: row?.creatorAddressOriginal || row?.creatorAddress })}
+                        onDoubleClick={() => handleOpenAddressBookWithData(row?.creatorAddress || EMPTY_STRING, row?.creatorAddressOriginal || row?.creatorAddress || EMPTY_STRING)}
+                      >
                         {row?.creatorAddress === address ||
                         row?.creatorAddress === userName ? (
                           <Box style={{ color: theme.palette.info.main }}>
@@ -964,7 +992,12 @@ export default function QortalWallet() {
                           row?.creatorAddress
                         )}
                       </StyledTableCell>
-                      <StyledTableCell style={{ width: 'auto' }} align="left">
+                      <StyledTableCell
+                        style={{ width: 'auto', cursor: 'pointer' }}
+                        align="left"
+                        title={t('core:action.double_click_addressbook', { address: row?.recipientOriginal || row?.recipient })}
+                        onDoubleClick={() => handleOpenAddressBookWithData(row?.recipient || EMPTY_STRING, row?.recipientOriginal || row?.recipient || EMPTY_STRING)}
+                      >
                         {row?.recipient === address ||
                         row?.recipient === userName ? (
                           <Box style={{ color: theme.palette.info.main }}>
@@ -1100,6 +1133,7 @@ export default function QortalWallet() {
                     blockHeight: number;
                     type: string;
                     creatorAddress: string;
+                    creatorAddressOriginal?: string;
                     identifier: string;
                     size: number;
                     fee: number;
@@ -1157,7 +1191,12 @@ export default function QortalWallet() {
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       {row?.type}
                     </StyledTableCell>
-                    <StyledTableCell style={{ width: 'auto' }} align="left">
+                    <StyledTableCell
+                      style={{ width: 'auto', cursor: 'pointer' }}
+                      align="left"
+                      title={t('core:action.double_click_addressbook', { address: row?.creatorAddressOriginal || row?.creatorAddress })}
+                      onDoubleClick={() => handleOpenAddressBookWithData(row?.creatorAddress || EMPTY_STRING, row?.creatorAddressOriginal || row?.creatorAddress || EMPTY_STRING)}
+                    >
                       {row?.creatorAddress === address ||
                       row?.creatorAddress === userName ? (
                         <Box style={{ color: theme.palette.info.main }}>
@@ -1296,7 +1335,9 @@ export default function QortalWallet() {
                     blockHeight: number;
                     type: string;
                     creatorAddress: string;
+                    creatorAddressOriginal?: string;
                     recipient: string;
+                    recipientOriginal?: string;
                     description: string | '';
                     amount: number;
                     fee: number;
@@ -1354,7 +1395,12 @@ export default function QortalWallet() {
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       {row?.type}
                     </StyledTableCell>
-                    <StyledTableCell style={{ width: 'auto' }} align="left">
+                    <StyledTableCell
+                      style={{ width: 'auto', cursor: 'pointer' }}
+                      align="left"
+                      title={t('core:action.double_click_addressbook', { address: row?.creatorAddressOriginal || row?.creatorAddress })}
+                      onDoubleClick={() => handleOpenAddressBookWithData(row?.creatorAddress || EMPTY_STRING, row?.creatorAddressOriginal || row?.creatorAddress || EMPTY_STRING)}
+                    >
                       {row?.creatorAddress === address ||
                       row?.creatorAddress === userName ? (
                         <Box style={{ color: theme.palette.info.main }}>
@@ -1364,7 +1410,12 @@ export default function QortalWallet() {
                         row?.creatorAddress
                       )}
                     </StyledTableCell>
-                    <StyledTableCell style={{ width: 'auto' }} align="left">
+                    <StyledTableCell
+                      style={{ width: 'auto', cursor: row?.recipientOriginal || row?.recipient ? 'pointer' : 'default' }}
+                      align="left"
+                      title={(row?.recipientOriginal || row?.recipient) ? t('core:action.double_click_addressbook', { address: row?.recipientOriginal || row?.recipient }) : undefined}
+                      onDoubleClick={() => (row?.recipientOriginal || row?.recipient) && handleOpenAddressBookWithData(row?.recipient || EMPTY_STRING, row?.recipientOriginal || row?.recipient || EMPTY_STRING)}
+                    >
                       {(() => {
                         if (row?.recipient) {
                           if (
@@ -1514,6 +1565,7 @@ export default function QortalWallet() {
                     admin: string;
                     blockHeight: number;
                     creatorAddress: string;
+                    creatorAddressOriginal?: string;
                     fee: number;
                     groupId: number;
                     groupName: string;
@@ -1577,7 +1629,12 @@ export default function QortalWallet() {
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       {row?.type}
                     </StyledTableCell>
-                    <StyledTableCell style={{ width: 'auto' }} align="left">
+                    <StyledTableCell
+                      style={{ width: 'auto', cursor: 'pointer' }}
+                      align="left"
+                      title={t('core:action.double_click_addressbook', { address: row?.creatorAddressOriginal || row?.creatorAddress })}
+                      onDoubleClick={() => handleOpenAddressBookWithData(row?.creatorAddress || EMPTY_STRING, row?.creatorAddressOriginal || row?.creatorAddress || EMPTY_STRING)}
+                    >
                       {row?.creatorAddress === address ||
                       row?.creatorAddress === userName ? (
                         <Box style={{ color: theme.palette.info.main }}>
@@ -1645,10 +1702,10 @@ export default function QortalWallet() {
                             return (
                               <Box>
                                 <Trans
-                                  i18nKey="group_invite"
+                                  i18nKey="message.group_actions.group_invite"
                                   values={{
                                     invitee: row?.invitee,
-                                    groupId: row?.groupId,
+                                    id: row?.groupId,
                                   }}
                                   components={{
                                     blue: (
@@ -2517,7 +2574,7 @@ export default function QortalWallet() {
                       )}
                     </StyledTableCell>
                     <StyledTableCell style={{ width: 'auto' }} align="left">
-                      {row?.sharePercent.startsWith('-') ? (
+                      {row?.sharePercent?.startsWith('-') ? (
                         <Box
                           style={{
                             color: theme.palette.error.main,
@@ -2872,7 +2929,7 @@ export default function QortalWallet() {
                           } else if (row?.type === 'REWARD_SHARE') {
                             {
                               row?.sharePercent &&
-                              row?.sharePercent.startsWith('-') ? (
+                              row?.sharePercent?.startsWith('-') ? (
                                 <Box
                                   style={{
                                     color: theme.palette.error.main,
@@ -3396,23 +3453,13 @@ export default function QortalWallet() {
         </Box>
       </Dialog>
 
-      <DialogGeneral
-        aria-labelledby="qort-electrum-servers"
+      <AddressBookDialog
         open={openQortAddressBook}
-        keepMounted={false}
-      >
-        <DialogContent>
-          <Typography
-            variant="h5"
-            align="center"
-            sx={{ color: 'text.primary', fontWeight: 700 }}
-          >
-            {t('core:message.generic.coming_soon', {
-              postProcess: 'capitalizeFirstChar',
-            })}
-          </Typography>
-        </DialogContent>
-      </DialogGeneral>
+        onClose={handleCloseAddressBook}
+        coinType={Coin.QORT}
+        onSelectAddress={handleSelectAddress}
+        prefillData={addressBookPrefill}
+      />
 
       <WalletCard sx={{ p: { xs: 2, md: 3 }, width: '100%' }}>
         <Grid container rowSpacing={{ xs: 2, md: 3 }} columnSpacing={2}>

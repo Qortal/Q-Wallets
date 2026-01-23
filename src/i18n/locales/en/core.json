@@ -8,6 +8,7 @@
     "close": "close",
     "copy_address": "copy address",
     "copy_hash": "copy hash: {{ hash }}",
+    "double_click_addressbook": "double-click to add to address book\n{{ address }}",
     "force_sync": "force sync",
     "refresh": "refresh",
     "remove": "remove",
@@ -19,6 +20,31 @@
   },
   "address": "address:",
   "address_book": "address book",
+  "address_book_title": "address book - {{coinType}}",
+  "address_book_empty": "no addresses saved yet",
+  "address_book_add_new": "add new address",
+  "address_book_search": "search by name, address or note",
+  "address_book_name": "name",
+  "address_book_address": "address",
+  "address_book_note": "note",
+  "address_book_actions": "actions",
+  "address_book_edit": "edit",
+  "address_book_delete": "delete",
+  "address_book_use": "use address",
+  "address_book_save": "save",
+  "address_book_cancel": "cancel",
+  "address_book_delete_confirm": "are you sure you want to delete {{name}}?",
+  "address_book_name_required": "name is required",
+  "address_book_name_max_length": "name must be 50 characters or less",
+  "address_book_address_required": "address is required",
+  "address_book_address_invalid": "invalid {{coinType}} address format",
+  "address_book_note_max_length": "note must be {{ max_note }} characters or less",
+  "address_book_added": "address added successfully",
+  "address_book_updated": "address updated successfully",
+  "address_book_deleted": "address deleted successfully",
+  "address_book_copy": "copy address",
+  "address_book_copied": "address copied to clipboard",
+  "address_book_sync_qdn": "save to QDN",
   "amount": "amount",
   "balance": "balance:",
   "balance_available": "available balance:",
@@ -96,6 +122,7 @@
       "update_group": "new description: {{ newDescription }} ID: {{ id }}"
     },
     "error": {
+      "address_already_exists": "Address already exists in the address book",
       "amount_positive": "Amount must be > 0",
       "amount_exceeds_balance": "`Max allowed: {{ maxAmount }}",
       "bitcoin_address_invalid": "Invalid BTC address",
@@ -112,6 +139,9 @@
       "recipient_required": "Recipient required",
       "recipient_too_short": "Recipient too short",
       "something_went_wrong": "Something went wrong. Please try again."
+    },
+    "success": {
+      "qdn_sync": "successfully synced {{coinType}} address book to QDN"
     }
   },
   "page": {

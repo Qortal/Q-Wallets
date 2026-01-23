@@ -8,6 +8,7 @@
     "close": "закрыть",
     "copy_address": "скопировать адрес",
     "copy_hash": "скопировать хеш: {{ hash }}",
+    "double_click_addressbook": "дважды щёлкните, чтобы добавить в адресную книгу\n{{ address }}",
     "force_sync": "принудительная синхронизация",
     "refresh": "обновить",
     "remove": "удалить",
@@ -19,6 +20,31 @@
   },
   "address": "адрес:",
   "address_book": "адресная книга",
+  "address_book_title": "адресная книга - {{coinType}}",
+  "address_book_empty": "адреса ещё не сохранены",
+  "address_book_add_new": "добавить новый адрес",
+  "address_book_search": "поиск по имени, адресу или заметке",
+  "address_book_name": "имя",
+  "address_book_address": "адрес",
+  "address_book_note": "заметка",
+  "address_book_actions": "действия",
+  "address_book_edit": "редактировать",
+  "address_book_delete": "удалить",
+  "address_book_use": "использовать адрес",
+  "address_book_save": "сохранить",
+  "address_book_cancel": "отмена",
+  "address_book_delete_confirm": "вы уверены, что хотите удалить {{name}}?",
+  "address_book_name_required": "имя обязательно",
+  "address_book_name_max_length": "имя не должно превышать 50 символов",
+  "address_book_address_required": "адрес обязателен",
+  "address_book_address_invalid": "неверный формат адреса {{coinType}}",
+  "address_book_note_max_length": "заметка не должна превышать {{ max_note }} символов",
+  "address_book_added": "адрес успешно добавлен",
+  "address_book_updated": "адрес успешно обновлён",
+  "address_book_deleted": "адрес успешно удалён",
+  "address_book_copy": "скопировать адрес",
+  "address_book_copied": "адрес скопирован в буфер обмена",
+  "address_book_sync_qdn": "сохранить в QDN",
   "amount": "сумма",
   "balance": "баланс:",
   "balance_available": "доступный баланс:",
@@ -97,6 +123,7 @@
       "update_group": "новое описание: {{ newDescription }} ID: {{ id }}"
     },
     "error": {
+      "address_already_exists": "Адрес уже существует в адресной книге",
       "amount_exceeds_balance": "Максимально допустимо: {{ maxAmount }}",
       "amount_positive": "Сумма должна быть больше 0",
       "bitcoin_address_invalid": "Недействительный адрес BTC",
@@ -113,6 +140,9 @@
       "recipient_required": "Получатель обязателен",
       "recipient_too_short": "Адрес получателя слишком короткий",
       "something_went_wrong": "Что-то пошло не так. Пожалуйста, попробуйте ещё раз."
+    },
+    "success": {
+      "qdn_sync": "адресная книга {{coinType}} успешно синхронизирована с QDN"
     }
   },
   "page": {

@@ -1,4 +1,4 @@
-import { EMPTY_STRING } from './constants';
+import { EMPTY_STRING, ONE_SPACE } from './constants';
 
 let timeSegments = [
   3.154e10,
@@ -54,9 +54,10 @@ export function timeoutDelay(delay: number) {
   return new Promise((res) => setTimeout(res, delay));
 }
 
-export function cropString(str: string) {
-  return str.length > 24
-    ? str.substring(0, 8) + '...' + str.substring(str.length - 8)
+export function cropString(str: string, max_length: number = 24) {
+  let one_third: number = max_length / 3;
+  return str.length > max_length
+    ? str.substring(0, one_third) + '...' + str.substring(str.length - one_third)
     : str;
 }
 
@@ -85,7 +86,7 @@ export function humanFileSize(
     u < units.length - 1
   );
 
-  return bytes.toFixed(dp) + ' ' + units[u];
+  return bytes.toFixed(dp) + ONE_SPACE + units[u];
 }
 
 export async function copyToClipboard(text: string): Promise<void> {

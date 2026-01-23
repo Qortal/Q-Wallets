@@ -8,6 +8,7 @@
     "close": "Cerrar",
     "copy_address": "Copiar dirección",
     "copy_hash": "Copiar hash: {{ hash }}",
+    "double_click_addressbook": "doble clic para agregar a la libreta de direcciones\n{{ address }}",
     "force_sync": "Forzar sincronización",
     "refresh": "Actualizar",
     "remove": "Eliminar",
@@ -19,6 +20,31 @@
   },
   "address": "dirección:",
   "address_book": "libreta de direcciones",
+  "address_book_title": "libreta de direcciones - {{coinType}}",
+  "address_book_empty": "aún no hay direcciones guardadas",
+  "address_book_add_new": "añadir nueva dirección",
+  "address_book_search": "buscar por nombre, dirección o nota",
+  "address_book_name": "nombre",
+  "address_book_address": "dirección",
+  "address_book_note": "nota",
+  "address_book_actions": "acciones",
+  "address_book_edit": "editar",
+  "address_book_delete": "eliminar",
+  "address_book_use": "usar dirección",
+  "address_book_save": "guardar",
+  "address_book_cancel": "cancelar",
+  "address_book_delete_confirm": "¿estás seguro de que quieres eliminar {{name}}?",
+  "address_book_name_required": "el nombre es obligatorio",
+  "address_book_name_max_length": "el nombre debe tener 50 caracteres o menos",
+  "address_book_address_required": "la dirección es obligatoria",
+  "address_book_address_invalid": "formato de dirección {{coinType}} no válido",
+  "address_book_note_max_length": "la nota debe tener {{ max_note }} caracteres o menos",
+  "address_book_added": "dirección añadida correctamente",
+  "address_book_updated": "dirección actualizada correctamente",
+  "address_book_deleted": "dirección eliminada correctamente",
+  "address_book_copy": "copiar dirección",
+  "address_book_copied": "dirección copiada al portapapeles",
+  "address_book_sync_qdn": "guardar en QDN",
   "amount": "monto",
   "balance": "saldo:",
   "balance_available": "saldo disponible:",
@@ -96,6 +122,7 @@
       "update_group": "nueva descripción: {{ newDescription }} ID: {{ id }}"
     },
     "error": {
+      "address_already_exists": "La dirección ya existe en la libreta de direcciones",
       "amount_exceeds_balance": "Máximo permitido: {{ maxAmount }}",
       "amount_positive": "El monto debe ser mayor que 0",
       "bitcoin_address_invalid": "Dirección BTC no válida",
@@ -112,6 +139,9 @@
       "recipient_required": "Destinatario requerido",
       "recipient_too_short": "La dirección del destinatario es demasiado corta",
       "something_went_wrong": "Algo salió mal. Inténtalo de nuevo."
+    },
+    "success": {
+      "qdn_sync": "libreta de direcciones {{coinType}} sincronizada con éxito en QDN"
     }
   },
   "page": {

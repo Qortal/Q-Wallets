@@ -6,7 +6,12 @@ import {
   useEffect,
   useState,
 } from 'react';
-import { epochToAgo, timeoutDelay, cropString, copyToClipboard } from '../../common/functions';
+import {
+  epochToAgo,
+  timeoutDelay,
+  cropString,
+  copyToClipboard,
+} from '../../common/functions';
 import { useTheme } from '@mui/material/styles';
 import {
   Alert,
@@ -61,7 +66,6 @@ import {
 } from '../../common/constants';
 import {
   CustomWidthTooltip,
-  DialogGeneral,
   SlideTransition,
   StyledTableCell,
   StyledTableRow,
@@ -72,6 +76,8 @@ import {
 } from '../../styles/page-styles';
 import { FeeManager } from '../../components/FeeManager';
 import { Coin } from 'qapp-core';
+import { validateLtcAddress } from '../../utils/addressValidation';
+import { AddressBookDialog } from '../../components/AddressBook/AddressBookDialog';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -185,15 +191,41 @@ export default function LitecoinWallet() {
   const ltcFeeCalculated = +(+inputFee / 1000 / 1e8).toFixed(DECIMAL_ROUND_UP);
   const estimatedFeeCalculated = +ltcFeeCalculated * LTC_FEE;
 
+  const maxSendableLtcCoin = () => {
+    // manage the correct round up
+    const value = (walletBalanceLtc - estimatedFeeCalculated).toString();
+    const [integer, decimal = ''] = value.split('.');
+    const truncated = decimal
+      .substring(0, DECIMAL_ROUND_UP)
+      .padEnd(DECIMAL_ROUND_UP, '0');
+    let truncatedMaxSendableLtcCoin: number = parseFloat(
+      `${integer}.${truncated}`
+    );
+    return truncatedMaxSendableLtcCoin;
+  };
+
   const emptyRows =
     page > 0
       ? Math.max(0, (1 + page) * rowsPerPage - transactionsLtc.length)
       : 0;
 
-  const handleOpenAddressBook = async () => {
+  const handleOpenAddressBook = () => {
     setOpenLtcAddressBook(true);
-    await new Promise((resolve) => setTimeout(resolve, TIME_SECONDS_2));
+  };
+
+  const handleCloseAddressBook = () => {
     setOpenLtcAddressBook(false);
+  };
+
+  const handleSelectAddress = (address: string, _name: string) => {
+    setLtcRecipient(address);
+    setLtcAmount(0);
+    setOpenLtcAddressBook(false);
+    setOpenLtcSend(true);
+    setAddressFormatError(false);
+    setOpenSendLtcError(false);
+    setWalletInfoError(null);
+    setWalletBalanceError(null);
   };
 
   const handleOpenLtcSend = () => {
@@ -213,12 +245,9 @@ export default function LitecoinWallet() {
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const value: string = e.target.value.trim();
-    const pattern =
-      /^(L[1-9A-HJ-NP-Za-km-z]{33}|M[1-9A-HJ-NP-Za-km-z]{33}|ltc1[2-9A-HJ-NP-Za-z]{39})$/;
-
     setLtcRecipient(value);
 
-    if (pattern.test(value) || value === EMPTY_STRING) {
+    if (validateLtcAddress(value) || value === EMPTY_STRING) {
       setAddressFormatError(false);
     } else {
       setAddressFormatError(true);
@@ -381,11 +410,10 @@ export default function LitecoinWallet() {
   };
 
   const handleSendMaxLtc = () => {
-    const maxLtcAmount = +walletBalanceLtc - estimatedFeeCalculated;
-    if (maxLtcAmount <= 0) {
+    if (maxSendableLtcCoin() <= 0) {
       setLtcAmount(0);
     } else {
-      setLtcAmount(maxLtcAmount);
+      setLtcAmount(maxSendableLtcCoin());
     }
   };
 
@@ -541,7 +569,9 @@ export default function LitecoinWallet() {
                           {input.address}
                         </span>
                         <span style={{ flex: 1, textAlign: 'right' }}>
-                          {(Number(input.amount) / 1e8).toFixed(DECIMAL_ROUND_UP)}
+                          {(Number(input.amount) / 1e8).toFixed(
+                            DECIMAL_ROUND_UP
+                          )}
                         </span>
                       </Box>
                     ))}
@@ -562,7 +592,9 @@ export default function LitecoinWallet() {
                           {output.address}
                         </span>
                         <span style={{ flex: 1, textAlign: 'right' }}>
-                          {(Number(output.amount) / 1e8).toFixed(DECIMAL_ROUND_UP)}
+                          {(Number(output.amount) / 1e8).toFixed(
+                            DECIMAL_ROUND_UP
+                          )}
                         </span>
                       </Box>
                     ))}
@@ -595,22 +627,33 @@ export default function LitecoinWallet() {
                   <StyledTableCell style={{ width: 'auto' }} align="left">
                     {row?.totalAmount > 0 ? (
                       <Box style={{ color: theme.palette.success.main }}>
-                        +{(Number(row?.totalAmount) / 1e8).toFixed(DECIMAL_ROUND_UP)}
+                        +
+                        {(Number(row?.totalAmount) / 1e8).toFixed(
+                          DECIMAL_ROUND_UP
+                        )}
                       </Box>
                     ) : (
                       <Box style={{ color: theme.palette.error.main }}>
-                        {(Number(row?.totalAmount) / 1e8).toFixed(DECIMAL_ROUND_UP)}
+                        {(Number(row?.totalAmount) / 1e8).toFixed(
+                          DECIMAL_ROUND_UP
+                        )}
                       </Box>
                     )}
                   </StyledTableCell>
                   <StyledTableCell style={{ width: 'auto' }} align="right">
                     {row?.totalAmount <= 0 ? (
                       <Box style={{ color: theme.palette.error.main }}>
-                        -{(Number(row?.feeAmount) / 1e8).toFixed(DECIMAL_ROUND_UP)}
+                        -
+                        {(Number(row?.feeAmount) / 1e8).toFixed(
+                          DECIMAL_ROUND_UP
+                        )}
                       </Box>
                     ) : (
                       <Box style={{ color: 'grey' }}>
-                        -{(Number(row?.feeAmount) / 1e8).toFixed(DECIMAL_ROUND_UP)}
+                        -
+                        {(Number(row?.feeAmount) / 1e8).toFixed(
+                          DECIMAL_ROUND_UP
+                        )}
                       </Box>
                     )}
                   </StyledTableCell>
@@ -956,23 +999,12 @@ export default function LitecoinWallet() {
         <FeeManager coin="LTC" onChange={setInputFee} />
       </Dialog>
 
-      <DialogGeneral
-        aria-labelledby="ltc-electrum-servers"
+      <AddressBookDialog
         open={openLtcAddressBook}
-        keepMounted={false}
-      >
-        <DialogContent>
-          <Typography
-            variant="h5"
-            align="center"
-            sx={{ color: 'text.primary', fontWeight: 700 }}
-          >
-            {t('core:message.generic.coming_soon', {
-              postProcess: 'capitalizeFirstChar',
-            })}
-          </Typography>
-        </DialogContent>
-      </DialogGeneral>
+        onClose={handleCloseAddressBook}
+        coinType={Coin.LTC}
+        onSelectAddress={handleSelectAddress}
+      />
 
       <WalletCard sx={{ p: { xs: 2, md: 3 }, width: '100%' }}>
         <Grid container rowSpacing={{ xs: 2, md: 3 }} columnSpacing={2}>
