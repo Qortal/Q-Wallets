@@ -2,8 +2,12 @@ import {
   AppBar,
   Box,
   Container,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   Drawer,
   IconButton,
+  Link,
   List,
   ListItem,
   ListItemButton,
@@ -14,6 +18,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useMemo, useContext, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import walletContext, { IContextProps } from './contexts/walletContext';
@@ -31,6 +36,8 @@ import packageJson from '../package.json';
 import { EMPTY_STRING, TIME_MINUTES_1 } from './common/constants';
 import MenuIcon from '@mui/icons-material/Menu';
 import { syncAllAddressBooksOnStartup } from './utils/addressBookQDN';
+import changelogContent from '../CHANGELOG.md?raw';
+import Markdown from 'react-markdown';
 
 export default function AppLayout() {
   useIframe();
@@ -46,6 +53,7 @@ export default function AppLayout() {
   const [isUsingGateway, setIsUsingGateway] = useState(true);
   const [nodeInfo, setNodeInfo] = useState<any>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [changelogOpen, setChangelogOpen] = useState(false);
 
   // derive selected from the URL
   const selectedSegment = useMemo(() => {
@@ -270,12 +278,20 @@ export default function AppLayout() {
           );
         })}
       </List>
-      <Typography
-        variant="caption"
-        sx={{ mt: 'auto', mb: 1, fontSize: 10, color: 'text.secondary', textAlign: 'center' }}
-      >
-        v{packageJson.version}
-      </Typography>
+      <Box sx={{ mt: 'auto', mb: 1, textAlign: 'center' }}>
+        <Typography variant="caption" sx={{ fontSize: 10, color: 'text.secondary' }}>
+          v{packageJson.version}
+        </Typography>
+        <br />
+        <Link
+          component="button"
+          variant="caption"
+          onClick={() => setChangelogOpen(true)}
+          sx={{ fontSize: 9, cursor: 'pointer' }}
+        >
+          CHANGELOG
+        </Link>
+      </Box>
     </Box>
   );
 
@@ -321,6 +337,46 @@ export default function AppLayout() {
           <Outlet />
         </Container>
       </Box>
+
+      <Dialog
+        open={changelogOpen}
+        onClose={() => setChangelogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        slotProps={{ paper: { sx: { maxHeight: '80vh' } } }}
+      >
+        <DialogTitle sx={{ textAlign: 'center', position: 'relative' }}>
+          CHANGELOG
+          <IconButton
+            onClick={() => setChangelogOpen(false)}
+            size="small"
+            sx={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box
+            sx={{
+              '& h1': { fontSize: '1.5rem', fontWeight: 600, mb: 2, mt: 0 },
+              '& h2': { fontSize: '1.2rem', fontWeight: 600, mb: 1, mt: 3, color: 'primary.main' },
+              '& h3': { fontSize: '1rem', fontWeight: 600, mb: 1, mt: 2 },
+              '& ul': { pl: 2, mb: 1 },
+              '& li': { mb: 0.5, fontSize: 14 },
+              '& p': { mb: 1, fontSize: 14 },
+              '& code': {
+                backgroundColor: 'action.hover',
+                px: 0.5,
+                py: 0.25,
+                borderRadius: 0.5,
+                fontSize: 13,
+              },
+            }}
+          >
+            <Markdown>{changelogContent}</Markdown>
+          </Box>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
