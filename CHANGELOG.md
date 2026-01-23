@@ -13,6 +13,8 @@ All notable changes to Q-Wallets will be documented in this file.
 - `maxSendable` functions for all supported coins (ARRR, BTC, DOGE, LTC, RVN, DGB)
 - Tests for LTC validation
 - New translations for address book
+- Add CHANGELOG.md file
+- Display changelog in a dialog
 
 ### Changed
 
