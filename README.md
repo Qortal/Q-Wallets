@@ -1,6 +1,6 @@
 # Q-Wallets
 
-**Multi-Chain Cryptocurrency Wallet for the Qortal Network**
+## Multi-Chain Cryptocurrency Wallet for the Qortal Network
 
 Q-Wallets is a modern, web-based wallet application that provides a unified interface for managing multiple cryptocurrencies within the Qortal decentralized ecosystem. Built with React and TypeScript, it offers a secure, user-friendly experience for handling digital assets.
 
@@ -23,24 +23,28 @@ Q-Wallets is your gateway to managing multiple cryptocurrencies on the Qortal ne
 ### Key Features
 
 #### Wallet Management
+
 - **View Balances** - Real-time balance updates for all supported coins
 - **Transaction History** - Complete transaction records with detailed information (timestamp, fee, sender/recipient, approval status)
 - **Send & Receive** - Easy-to-use forms for transferring cryptocurrencies
 - **QR Code Generation** - Quickly share your receiving addresses
 
 #### Address Book
+
 - **Save Contacts** - Store frequently-used addresses with custom names
 - **Search & Filter** - Quickly find saved addresses
 - **Multi-Coin Support** - Separate address books for each cryptocurrency
 - **Easy Integration** - Use saved addresses directly in sending forms
 
 #### Smart Fee Management
+
 - **Recommended Fees** - Choose from low, medium, or high priority
 - **Custom Fees** - Set your own fee for advanced users
 - **Multiple Sources** - Fetches fee estimates from decentralized publishers
 - **Real-Time Updates** - Current network fee recommendations
 
 #### User Experience
+
 - **Multi-Language Support** - Available in different languages
 - **Theme Options** - Light and dark mode for comfortable viewing
 - **Responsive Design** - Works seamlessly on desktop and mobile devices
