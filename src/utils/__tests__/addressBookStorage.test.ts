@@ -108,6 +108,29 @@ describe('addressBookStorage', () => {
       expect(parsed).toHaveProperty('entries');
       expect(parsed).toHaveProperty('lastUpdated');
     });
+
+    it('migration sets lastUpdated to 0 so QDN is always treated as newer', () => {
+      // Root cause 3 fix: old-format data must migrate with lastUpdated:0 so
+      // that any valid QDN timestamp (> 0) takes precedence on startup sync,
+      // avoiding a spurious "local is newer" publish proposal.
+      const oldFormatData = [
+        {
+          id: 'test-1',
+          name: 'Alice',
+          address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
+          note: '',
+          coinType: Coin.BTC,
+          createdAt: 1000,
+        },
+      ];
+      localStorage.setItem('q-wallets-addressbook-BTC', JSON.stringify(oldFormatData));
+
+      getAddressBook(Coin.BTC);
+
+      const stored = localStorage.getItem('q-wallets-addressbook-BTC');
+      const parsed = JSON.parse(stored!);
+      expect(parsed.lastUpdated).toBe(0);
+    });
   });
 
   describe('addAddress()', () => {
