@@ -2,6 +2,22 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.3.1] - 2026-02-27
+
+### Fixed
+
+- QDN address book sync: skip unnecessary publish when timestamps diverge but content is identical (hash comparison before publishing)
+- QDN address book sync: re-align local timestamp to QDN after skipping publish, and sync forward after publishing, to avoid redundant evaluations on next startup
+
+### Changed
+
+- Release workflow now fails with a clear message if the release version already exists, instead of silently deleting it
+- Removed push trigger from npm tests workflow
+
+### Tests
+
+- Added tests covering the QDN address book hash-comparison sync bugfix
+
 ## [1.3.0] - 2026-01-23
 
 ### Added
