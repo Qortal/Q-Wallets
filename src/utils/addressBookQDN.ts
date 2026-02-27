@@ -294,11 +294,35 @@ async function syncAddressBookOnStartup(
       };
       localStorage.setItem(localStorageKey, JSON.stringify(dataToStore));
     } else if (localLastUpdated > qdnLastUpdated) {
-      // Local data is newer, publish to QDN
-      console.log(
-        `QDN Sync: Local data is newer for ${coinType}, publishing to QDN`
-      );
-      await publishToQDN(coinType, localEntries, userName);
+      // Local timestamp is newer, but check content before publishing to avoid
+      // unnecessary fees when timestamps diverge without actual data changes
+      // (e.g. debounce timing gap, old-format migration, clock skew)
+      const localHash = generateHash(localEntries);
+      const qdnHash = qdnData.hash ?? generateHash(qdnData.entries);
+      if (localHash === qdnHash) {
+        console.log(
+          `QDN Sync: ${coinType} timestamps differ but content is identical, skipping publish`
+        );
+        // Re-align local timestamp to QDN so future startups go straight to the
+        // hash-comparison path instead of re-evaluating timestamps
+        const dataToStore: AddressBookLocalStorage = {
+          entries: localEntries,
+          lastUpdated: qdnData.lastUpdated,
+        };
+        localStorage.setItem(localStorageKey, JSON.stringify(dataToStore));
+      } else {
+        console.log(
+          `QDN Sync: Local data is newer for ${coinType}, publishing to QDN`
+        );
+        const publishedAt = Date.now();
+        await publishToQDN(coinType, localEntries, userName);
+        // Sync local timestamp forward so next startup sees equal timestamps
+        const dataToStore: AddressBookLocalStorage = {
+          entries: localEntries,
+          lastUpdated: publishedAt,
+        };
+        localStorage.setItem(localStorageKey, JSON.stringify(dataToStore));
+      }
     } else {
       // Same timestamp - use hash comparison if available
       if (qdnData.hash && localData) {
