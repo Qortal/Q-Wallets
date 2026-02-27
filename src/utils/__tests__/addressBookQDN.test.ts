@@ -294,5 +294,76 @@ describe('syncAllAddressBooksOnStartup', () => {
 
       expect(wasQortPublished()).toBe(false);
     });
+
+    it('aligns the local timestamp with QDN after publishing', async () => {
+      // Root cause 1 fix: the timestamp stored locally must equal the timestamp
+      // that was written into QDN so the next startup sees equal timestamps.
+      setLocalStorage([ENTRY_ALICE], 1000);
+
+      const before = Date.now();
+      await syncAllAddressBooksOnStartup('TestUser');
+      const after = Date.now();
+
+      const stored = getStoredData();
+      expect(stored.lastUpdated).toBeGreaterThanOrEqual(before);
+      expect(stored.lastUpdated).toBeLessThanOrEqual(after);
+    });
+
+    it('records the published hash after a successful publish', async () => {
+      // Root cause 2 fix: publishToQDN must write the published-hash sentinel
+      // so future startups can detect a propagation-delay scenario.
+      setLocalStorage([ENTRY_ALICE], 1000);
+
+      await syncAllAddressBooksOnStartup('TestUser');
+
+      const hash = localStorage.getItem('q-wallets-addressbook-published-QORT');
+      expect(hash).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // BUG FIX: skip publish when QDN is null but content matches last publish
+  // (root cause 2 — QDN propagation delay)
+  // -------------------------------------------------------------------------
+
+  describe('BUG FIX — QDN unavailable but content matches last publish → no publish', () => {
+    it('does NOT publish on the second startup when content is unchanged', async () => {
+      // First startup: QDN is null, local has entries → publishes and records hash.
+      setLocalStorage([ENTRY_ALICE], 1000);
+      await syncAllAddressBooksOnStartup('TestUser');
+      expect(wasQortPublished()).toBe(true);
+
+      // Reset call recorder.
+      mockQortalRequest.mockClear();
+
+      // Second startup: QDN still null (propagation delay), same content.
+      await syncAllAddressBooksOnStartup('TestUser');
+
+      expect(wasQortPublished()).toBe(false);
+    });
+
+    it('DOES publish when content has changed since the last publish', async () => {
+      // Simulate a prior publish of ENTRY_ALICE.
+      setLocalStorage([ENTRY_ALICE], 1000);
+      await syncAllAddressBooksOnStartup('TestUser');
+      mockQortalRequest.mockClear();
+
+      // User adds ENTRY_BOB locally; QDN is still null.
+      setLocalStorage([ENTRY_ALICE, ENTRY_BOB], 2000);
+
+      await syncAllAddressBooksOnStartup('TestUser');
+
+      expect(wasQortPublished()).toBe(true);
+    });
+
+    it('publishes on first startup when the published-hash sentinel is absent', async () => {
+      // No prior publish recorded.
+      setLocalStorage([ENTRY_ALICE], 1000);
+      // qdnDataForQort remains null.
+
+      await syncAllAddressBooksOnStartup('TestUser');
+
+      expect(wasQortPublished()).toBe(true);
+    });
   });
 });
