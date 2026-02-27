@@ -39,11 +39,13 @@ export const getAddressBook = (coinType: Coin): AddressBookEntry[] => {
 
     // Handle both old format (array) and new format (object with metadata)
     if (Array.isArray(parsed)) {
-      // Old format - migrate to new format
+      // Old format - migrate to new format.
+      // Use lastUpdated:0 so QDN (any valid timestamp > 0) is always considered
+      // newer and used to refresh local on the next startup sync.
       entries = parsed;
       const storageData: AddressBookLocalStorage = {
         entries,
-        lastUpdated: Date.now(),
+        lastUpdated: 0,
       };
       localStorage.setItem(key, JSON.stringify(storageData));
     } else {
