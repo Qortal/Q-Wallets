@@ -53,9 +53,12 @@ jobs:
           zip -r ../${{ env.APP_NAME }}-${{ steps.package-version.outputs.version }}.zip .
           cd ..
           
-      - name: Delete existing release if exists
+      - name: Check release does not already exist
         run: |
-          gh release delete v${{ steps.package-version.outputs.version }} --yes --cleanup-tag || true
+          if gh release view v${{ steps.package-version.outputs.version }} &>/dev/null; then
+            echo "Release v${{ steps.package-version.outputs.version }} already exists. Bump the version in package.json before releasing."
+            exit 1
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
