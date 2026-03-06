@@ -5,17 +5,16 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
-  ToggleButtonGroupProps,
   Typography,
 } from '@mui/material';
-import { useEffect } from 'react';
+import { MouseEvent, useEffect } from 'react';
 import {
   CoinActionContainer,
   CoinActionRow,
   CustomLabel,
   HeaderRow,
 } from '../styles/Fees-styles';
-import { useRecommendedFees } from '../hooks/useRecommendedFees';
+import { useRecommendedFees, FeeType } from '../hooks/useRecommendedFees';
 import { useTranslation } from 'react-i18next';
 
 type FeeManagerProps = {
@@ -37,9 +36,9 @@ export const FeeManager = ({ coin, onChange }: FeeManagerProps) => {
     setCustomFee,
   } = useRecommendedFees({ selectedCoin: coin });
 
-  const handleChangeRecommended: ToggleButtonGroupProps['onChange'] = (
-    _event,
-    newAlignment
+  const handleChangeRecommended = (
+    _event: MouseEvent<HTMLElement>,
+    newAlignment: FeeType | null
   ) => {
     if (newAlignment) {
       setSelectFeeType(newAlignment);
@@ -91,7 +90,7 @@ export const FeeManager = ({ coin, onChange }: FeeManagerProps) => {
             <Select
               size="small"
               value={selectedFeePublisher}
-              onChange={(e) => {
+              onChange={(e: { target: { value: string } }) => {
                 if (e.target.value) {
                   setSelectedFeePublisher(e.target.value);
                 }
@@ -150,7 +149,7 @@ export const FeeManager = ({ coin, onChange }: FeeManagerProps) => {
                     id="standard-adornment-name"
                     type="number"
                     value={customFee}
-                    onChange={(e) => setCustomFee(+e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomFee(+e.target.value)}
                     autoComplete="off"
                   />
                 </Box>

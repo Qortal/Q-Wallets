@@ -36,7 +36,8 @@ import {
   Typography,
 } from '@mui/material';
 import { NumericFormat } from 'react-number-format';
-import Snackbar, { SnackbarCloseReason } from '@mui/material/Snackbar';
+import Snackbar from '@mui/material/Snackbar';
+type SnackbarCloseReason = 'timeout' | 'clickaway' | 'escapeKeyDown';
 import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
 import QRCode from 'react-qr-code';

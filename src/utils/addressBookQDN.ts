@@ -30,6 +30,7 @@ async function getCurrentUserName(): Promise<string | null> {
  * Includes entries, timestamp, and optional hash for conflict detection
  */
 export interface AddressBookQDNData {
+  coinType?: string; // Guards against QDN returning a resource for the wrong coin
   entries: AddressBookEntry[];
   lastUpdated: number; // Unix timestamp
   hash?: string; // Optional: hash of entries for quick comparison
@@ -104,6 +105,7 @@ async function publishToQDN(
 
     // Prepare data object with metadata
     const qdnData: AddressBookQDNData = {
+      coinType,
       entries,
       lastUpdated,
       hash,
@@ -250,6 +252,26 @@ async function fetchFromQDN(
       throw new Error(
         `Unexpected decrypted data type: ${typeof decryptedBase64}`
       );
+    }
+
+    // Reject resources that carry a different coinType. This guards against
+    // the Qortal node returning a resource for a different identifier when the
+    // requested one is not yet available (e.g. during propagation).
+    // Primary check: top-level coinType field (present in resources published
+    // after the fix was deployed).
+    if (qdnData.coinType && qdnData.coinType !== coinType) {
+      console.warn(
+        `QDN Sync: Fetched resource for "${coinType}" contains coinType "${qdnData.coinType}", discarding`
+      );
+      return null;
+    }
+    // Secondary check: entries' coinType field (covers older QDN resources that
+    // predate the top-level coinType field).
+    if (qdnData.entries.some((e) => e.coinType !== coinType)) {
+      console.warn(
+        `QDN Sync: Fetched resource for "${coinType}" contains entries with wrong coinType, discarding`
+      );
+      return null;
     }
 
     return qdnData;

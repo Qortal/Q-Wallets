@@ -2,6 +2,18 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.3.2] - 2026-03-06
+
+### Fixed
+
+- QDN address book check: added `coinType` field to published QDN resources and dual validation in `fetchFromQDN` to discard resources returned by the Qortal node for a different coin identifier. Primary check uses the new top-level `coinType` field; secondary check uses entries' `coinType` field for backward compatibility with older published resources.
+- TypeScript build errors for MUI v7 compatibility: replaced removed named exports (`SlideProps`, `TooltipProps`, `TransitionProps`, `SnackbarCloseReason`, `ToggleButtonGroupProps`) with `ComponentProps<typeof ...>` equivalents or local type definitions; added explicit `Theme` typing to `styled()` callbacks.
+- `NumericFormat` forwarded MUI props no longer cause TypeScript errors.
+
+### Tests
+
+- Added 4 tests covering the QDN coinType mismatch scenario.
+
 ## [1.3.1] - 2026-02-27
 
 ### Fixed

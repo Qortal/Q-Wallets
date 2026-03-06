@@ -32,9 +32,11 @@ import {
   Toolbar,
   Typography,
 } from '@mui/material';
-import { NumericFormat } from 'react-number-format';
+import { NumericFormat as _NumericFormat } from 'react-number-format';
+const NumericFormat = _NumericFormat as React.FC<React.ComponentProps<typeof _NumericFormat> & Record<string, unknown>>;
 import TableCell from '@mui/material/TableCell';
-import Snackbar, { SnackbarCloseReason } from '@mui/material/Snackbar';
+import Snackbar from '@mui/material/Snackbar';
+type SnackbarCloseReason = 'timeout' | 'clickaway' | 'escapeKeyDown';
 import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
 import QRCode from 'react-qr-code';
@@ -958,7 +960,6 @@ export default function DigibyteWallet() {
             allowNegative={false}
             customInput={TextField}
             valueIsNumericString
-            variant="outlined"
             label="Amount (DGB)"
             fullWidth
             isAllowed={(values) => {
