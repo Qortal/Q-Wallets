@@ -18,6 +18,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useMemo, useContext, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -248,7 +249,7 @@ export default function AppLayout() {
                 sx={{
                   py: 2,
                   minHeight: 56,
-                  '&.Mui-selected': (theme) => ({
+                  '&.Mui-selected': (theme: Theme) => ({
                     borderRight: `3px solid ${theme.palette.primary.main}`,
                   }),
                 }}
@@ -298,7 +299,7 @@ export default function AppLayout() {
   return (
     <Box sx={{ display: 'flex', width: '100%' }}>
       {isMobile && (
-        <AppBar position="fixed" color="primary" sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
+        <AppBar position="fixed" color="primary" sx={{ zIndex: (t: Theme) => t.zIndex.drawer + 1 }}>
           <Toolbar sx={{ minHeight: 56 }}>
             <IconButton
               color="inherit"

@@ -39,7 +39,8 @@ import {
 } from '@mui/material';
 import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
-import Snackbar, { SnackbarCloseReason } from '@mui/material/Snackbar';
+import Snackbar from '@mui/material/Snackbar';
+type SnackbarCloseReason = 'timeout' | 'clickaway' | 'escapeKeyDown';
 import { useTheme } from '@mui/material/styles';
 import TableCell from '@mui/material/TableCell';
 import { Coin, RequestQueueWithPromise, useGlobal } from 'qapp-core';
@@ -54,7 +55,8 @@ import {
   useState,
 } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { NumericFormat } from 'react-number-format';
+import { NumericFormat as _NumericFormat } from 'react-number-format';
+const NumericFormat = _NumericFormat as React.FC<React.ComponentProps<typeof _NumericFormat> & Record<string, unknown>>;
 import QRCode from 'react-qr-code';
 import coinLogoQORT from '../../assets/qort.png';
 import {
@@ -3382,7 +3384,6 @@ export default function QortalWallet() {
             allowNegative={false}
             customInput={TextField}
             valueIsNumericString
-            variant="outlined"
             label={
               t('core:amount', { postProcess: 'capitalizeAll' }) + '(QORT)'
             }
@@ -3411,7 +3412,7 @@ export default function QortalWallet() {
             id="qort-address"
             margin="normal"
             value={qortRecipient}
-            onChange={(e) => {
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               setQortRecipient(e.target.value.trim());
               setRecipientTouched(true);
             }}

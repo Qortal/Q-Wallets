@@ -3,32 +3,28 @@ import {
   Card,
   Dialog,
   Slide,
-  SlideProps,
   styled,
   TableCell,
   tableCellClasses,
   TableRow,
   Tooltip,
   tooltipClasses,
-  TooltipProps,
 } from '@mui/material';
-import { TransitionProps } from '@mui/material/transitions';
-import { forwardRef, ReactElement, Ref } from 'react';
+import type { Theme } from '@mui/material/styles';
+import { ComponentProps, forwardRef, Ref } from 'react';
 
 export const Transition = forwardRef(function Transition(
-  props: TransitionProps & {
-    children: ReactElement<unknown>;
-  },
+  props: ComponentProps<typeof Slide>,
   ref: Ref<unknown>
 ) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-export function SlideTransition(props: SlideProps) {
+export function SlideTransition(props: ComponentProps<typeof Slide>) {
   return <Slide {...props} direction="up" />;
 }
 
-export const DialogGeneral = styled(Dialog)(({ theme }) => ({
+export const DialogGeneral = styled(Dialog)(({ theme }: { theme: Theme }) => ({
   '& .MuiDialogContent-root': {
     padding: theme.spacing(2),
   },
@@ -40,7 +36,7 @@ export const DialogGeneral = styled(Dialog)(({ theme }) => ({
   },
 }));
 
-export const LightwalletDialog = styled(Dialog)(({ theme }) => ({
+export const LightwalletDialog = styled(Dialog)(({ theme }: { theme: Theme }) => ({
   '& .MuiDialogContent-root': {
     padding: theme.spacing(2),
   },
@@ -52,7 +48,7 @@ export const LightwalletDialog = styled(Dialog)(({ theme }) => ({
   },
 }));
 
-export const SubmitDialog = styled(Dialog)(({ theme }) => ({
+export const SubmitDialog = styled(Dialog)(({ theme }: { theme: Theme }) => ({
   '& .MuiDialogContent-root': {
     padding: theme.spacing(2),
   },
@@ -65,7 +61,7 @@ export const SubmitDialog = styled(Dialog)(({ theme }) => ({
 }));
 
 export const CustomWidthTooltip = styled(
-  ({ className, ...props }: TooltipProps) => (
+  ({ className, ...props }: ComponentProps<typeof Tooltip>) => (
     <Tooltip {...props} classes={{ popper: className }} />
   )
 )({
@@ -82,7 +78,7 @@ export const WalletCard = styled(Card)({
   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
 });
 
-export const WalletButtons = styled(Button)(({ theme }) => ({
+export const WalletButtons = styled(Button)(({ theme }: { theme: Theme }) => ({
   width: 'auto',
   backgroundColor: '#05a2e4',
   color: 'white',
@@ -95,7 +91,7 @@ export const WalletButtons = styled(Button)(({ theme }) => ({
   },
 }));
 
-export const StyledTableCell = styled(TableCell)(({ theme }) => ({
+export const StyledTableCell = styled(TableCell)(({ theme }: { theme: Theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     backgroundColor: '#02648d',
     color: theme.palette.common.white,
@@ -112,7 +108,7 @@ export const StyledTableCell = styled(TableCell)(({ theme }) => ({
   },
 }));
 
-export const StyledTableRow = styled(TableRow)(({ theme }) => ({
+export const StyledTableRow = styled(TableRow)(({ theme }: { theme: Theme }) => ({
   '&:nth-of-type(odd)': {
     backgroundColor: theme.palette.action.hover,
   },
