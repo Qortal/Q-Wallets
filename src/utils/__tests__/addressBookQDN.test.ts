@@ -42,6 +42,15 @@ const ENTRY_BOB: AddressBookEntry = {
   createdAt: 2000,
 };
 
+const ENTRY_DGB: AddressBookEntry = {
+  id: 'entry-dgb',
+  name: 'DGB-test',
+  address: 'DQgvYXiTLkZLFGEnNZYbo4bBxPu5X9Unex',
+  note: '',
+  coinType: 'DGB' as any,
+  createdAt: 3000,
+};
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -519,6 +528,62 @@ describe('syncAllAddressBooksOnStartup', () => {
       await syncAllAddressBooksOnStartup('TestUser');
 
       expect(wasQortPublished()).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // BUG FIX: QDN returns a resource for the wrong coin type (storage mix)
+  //
+  // Scenario: the Qortal node returns the DGB resource when asked for the QORT
+  // identifier (e.g. because the QORT resource does not exist yet and the node
+  // falls back to the most-recently-published resource for that service/name).
+  // The coinType field on the returned object must cause the sync to discard
+  // the data rather than store DGB entries under q-wallets-addressbook-QORT.
+  // -------------------------------------------------------------------------
+
+  describe('BUG FIX — QDN returns resource with mismatched coinType → discard', () => {
+    it('does not store entries from a mismatched top-level coinType into local storage', async () => {
+      // QORT local storage is empty. QDN returns DGB data for the QORT identifier.
+      qdnDataForQort = { coinType: 'DGB', entries: [ENTRY_DGB], lastUpdated: 5000 };
+
+      await syncAllAddressBooksOnStartup('TestUser');
+
+      // QORT storage must remain empty — DGB entries must not bleed in.
+      expect(getStoredData('QORT')).toBeNull();
+    });
+
+    it('does not overwrite existing QORT entries with entries from a wrong top-level coinType', async () => {
+      setLocalStorage([ENTRY_ALICE], 1000);
+      // QDN returns DGB data with a newer timestamp — without the fix this
+      // would overwrite ENTRY_ALICE with ENTRY_DGB under the QORT key.
+      qdnDataForQort = { coinType: 'DGB', entries: [ENTRY_DGB], lastUpdated: 5000 };
+
+      await syncAllAddressBooksOnStartup('TestUser');
+
+      const stored = getStoredData('QORT');
+      expect(stored.entries).toHaveLength(1);
+      expect(stored.entries[0].id).toBe(ENTRY_ALICE.id);
+    });
+
+    it('does not store entries when only the entries coinType mismatches (old format, no top-level coinType)', async () => {
+      // Old QDN resources published before the fix have no top-level coinType.
+      // The secondary check on entries must still reject them.
+      qdnDataForQort = { entries: [ENTRY_DGB], lastUpdated: 5000 };
+
+      await syncAllAddressBooksOnStartup('TestUser');
+
+      expect(getStoredData('QORT')).toBeNull();
+    });
+
+    it('does not overwrite existing QORT entries from old-format resource with wrong entries coinType', async () => {
+      setLocalStorage([ENTRY_ALICE], 1000);
+      qdnDataForQort = { entries: [ENTRY_DGB], lastUpdated: 5000 };
+
+      await syncAllAddressBooksOnStartup('TestUser');
+
+      const stored = getStoredData('QORT');
+      expect(stored.entries).toHaveLength(1);
+      expect(stored.entries[0].id).toBe(ENTRY_ALICE.id);
     });
   });
 });
