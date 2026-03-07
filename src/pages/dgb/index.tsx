@@ -958,7 +958,7 @@ export default function DigibyteWallet() {
             defaultValue={0}
             value={dgbAmount}
             allowNegative={false}
-            customInput={TextField}
+            customInput={TextField as React.ComponentType<any>}
             valueIsNumericString
             label="Amount (DGB)"
             fullWidth

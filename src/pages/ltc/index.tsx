@@ -958,7 +958,7 @@ export default function LitecoinWallet() {
             defaultValue={0}
             value={ltcAmount}
             allowNegative={false}
-            customInput={TextField}
+            customInput={TextField as React.ComponentType<any>}
             valueIsNumericString
             label="Amount (LTC)"
             fullWidth
