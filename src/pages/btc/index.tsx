@@ -953,7 +953,7 @@ export default function BitcoinWallet() {
             defaultValue={0}
             value={btcAmount}
             allowNegative={false}
-            customInput={TextField}
+            customInput={TextField as React.ComponentType<any>}
             valueIsNumericString
             label="Amount (BTC)"
             fullWidth

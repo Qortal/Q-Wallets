@@ -3382,7 +3382,7 @@ export default function QortalWallet() {
             defaultValue={0}
             value={qortAmount ?? EMPTY_STRING}
             allowNegative={false}
-            customInput={TextField}
+            customInput={TextField as React.ComponentType<any>}
             valueIsNumericString
             label={
               t('core:amount', { postProcess: 'capitalizeAll' }) + '(QORT)'

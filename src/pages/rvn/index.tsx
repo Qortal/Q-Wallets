@@ -986,7 +986,7 @@ export default function RavencoinWallet() {
             defaultValue={0}
             value={rvnAmount}
             allowNegative={false}
-            customInput={TextField}
+            customInput={TextField as React.ComponentType<any>}
             valueIsNumericString
             label="Amount (RVN)"
             fullWidth

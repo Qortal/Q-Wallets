@@ -929,7 +929,7 @@ export default function DogecoinWallet() {
             defaultValue={0}
             value={dogeAmount}
             allowNegative={false}
-            customInput={TextField}
+            customInput={TextField as React.ComponentType<any>}
             valueIsNumericString
             label="Amount (DOGE)"
             fullWidth
