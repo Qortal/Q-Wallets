@@ -278,7 +278,8 @@
     "address_confirmed": "アドレスが確認されました",
     "confirm_address_before_saving": "保存する前にこのアドレスを確認してください。",
     "confirm_address": "アドレスを確認",
-    "add_note_optional": "メモを追加 (任意)"
+    "add_note_optional": "メモを追加 (任意)",
+    "no_registered_name": "このアドレスには登録済みのQortal名がありません。独自のラベルを入力してください。"
   },
   "app": {
     "changelog": "変更履歴",

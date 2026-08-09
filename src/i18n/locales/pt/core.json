@@ -278,7 +278,8 @@
     "address_confirmed": "Endereco confirmado",
     "confirm_address_before_saving": "Confirme este endereco antes de salvar.",
     "confirm_address": "Confirmar endereco",
-    "add_note_optional": "Adicionar uma nota (opcional)"
+    "add_note_optional": "Adicionar uma nota (opcional)",
+    "no_registered_name": "Nenhum nome Qortal está registado para este endereço. Introduza a sua própria etiqueta."
   },
   "app": {
     "changelog": "REGISTRO DE ALTERACOES",

@@ -281,4 +281,137 @@ describe('AddressFormDialog', () => {
       expect(nameInput.value).toBe('');
     });
   });
+
+  describe('QORT addresses without a registered name', () => {
+    const qortAddress = `Q${'B'.repeat(33)}`;
+
+    it('should let the user save a custom label for an address that owns no name', async () => {
+      const user = userEvent.setup();
+      const onSave = vi.fn();
+      const qortalRequestMock = vi.fn().mockResolvedValue('');
+      vi.stubGlobal('qortalRequest', qortalRequestMock);
+
+      render(
+        <AddressFormDialog
+          {...defaultProps}
+          coinType={Coin.QORT}
+          onSave={onSave}
+        />
+      );
+
+      const nameInput = screen.getByLabelText(
+        /core:address_book_name/
+      ) as HTMLInputElement;
+      const addressInput = screen.getByLabelText(
+        /core:address_book_address/
+      ) as HTMLInputElement;
+
+      await user.type(addressInput, qortAddress);
+
+      expect(
+        await screen.findByText('core:address_book_ui.no_registered_name')
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText('core:message.error.recipient_not_found')
+      ).not.toBeInTheDocument();
+
+      // Typing a label must not wipe the address the label belongs to.
+      await user.type(nameInput, 'My friend');
+      expect(addressInput.value).toBe(qortAddress);
+      expect(searchQortalNames).not.toHaveBeenCalled();
+
+      await user.click(
+        screen.getByLabelText('core:address_book_ui.confirm_address')
+      );
+
+      const saveButton = screen.getByText(/core:address_book_save/);
+      await waitFor(() => expect(saveButton).toBeEnabled());
+      await user.click(saveButton);
+
+      expect(onSave).toHaveBeenCalledWith({
+        name: 'My friend',
+        address: qortAddress,
+        note: '',
+        coinType: Coin.QORT,
+      });
+    });
+
+    it('should keep the address while renaming an existing unnamed contact', async () => {
+      const user = userEvent.setup();
+      const onSave = vi.fn();
+      const qortalRequestMock = vi.fn().mockResolvedValue(null);
+      vi.stubGlobal('qortalRequest', qortalRequestMock);
+
+      const entry = {
+        id: '1',
+        name: 'Old label',
+        address: qortAddress,
+        note: '',
+        coinType: Coin.QORT,
+        createdAt: Date.now(),
+      };
+
+      render(
+        <AddressFormDialog
+          {...defaultProps}
+          coinType={Coin.QORT}
+          entry={entry}
+          onSave={onSave}
+        />
+      );
+
+      const nameInput = screen.getByLabelText(
+        /core:address_book_name/
+      ) as HTMLInputElement;
+      const addressInput = screen.getByLabelText(
+        /core:address_book_address/
+      ) as HTMLInputElement;
+
+      await waitFor(() =>
+        expect(qortalRequestMock).toHaveBeenCalledWith({
+          action: 'GET_PRIMARY_NAME',
+          address: qortAddress,
+        })
+      );
+
+      await user.clear(nameInput);
+      await user.type(nameInput, 'New label');
+
+      expect(addressInput.value).toBe(qortAddress);
+
+      const saveButton = screen.getByText(/core:address_book_save/);
+      await waitFor(() => expect(saveButton).toBeEnabled());
+      await user.click(saveButton);
+
+      expect(onSave).toHaveBeenCalledWith({
+        name: 'New label',
+        address: qortAddress,
+        note: '',
+        coinType: Coin.QORT,
+      });
+    });
+
+    it('should still clear the address when renaming a contact whose address owns a name', async () => {
+      const user = userEvent.setup();
+      const qortalRequestMock = vi.fn().mockResolvedValue('Phill');
+      vi.stubGlobal('qortalRequest', qortalRequestMock);
+
+      render(<AddressFormDialog {...defaultProps} coinType={Coin.QORT} />);
+
+      const nameInput = screen.getByLabelText(
+        /core:address_book_name/
+      ) as HTMLInputElement;
+      const addressInput = screen.getByLabelText(
+        /core:address_book_address/
+      ) as HTMLInputElement;
+
+      await user.type(addressInput, qortAddress);
+
+      await waitFor(() => expect(nameInput.value).toBe('Phill'));
+
+      await user.type(nameInput, 'y');
+
+      expect(addressInput.value).toBe('');
+    });
+  });
 });

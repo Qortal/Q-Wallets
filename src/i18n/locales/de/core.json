@@ -277,7 +277,8 @@
     "address_confirmed": "Adresse bestaetigt",
     "confirm_address_before_saving": "Bestaetige diese Adresse vor dem Speichern.",
     "confirm_address": "Adresse bestaetigen",
-    "add_note_optional": "Notiz hinzufuegen (optional)"
+    "add_note_optional": "Notiz hinzufuegen (optional)",
+    "no_registered_name": "Für diese Adresse ist kein Qortal-Name registriert. Gib eine eigene Bezeichnung ein."
   },
   "app": {
     "changelog": "AENDERUNGSPROTOKOLL",
