@@ -277,7 +277,8 @@
     "address_confirmed": "Direccion confirmada",
     "confirm_address_before_saving": "Confirma esta direccion antes de guardar.",
     "confirm_address": "Confirmar direccion",
-    "add_note_optional": "Agregar una nota (opcional)"
+    "add_note_optional": "Agregar una nota (opcional)",
+    "no_registered_name": "No hay ningún nombre de Qortal registrado para esta dirección. Escribe tu propia etiqueta."
   },
   "app": {
     "changelog": "REGISTRO DE CAMBIOS",

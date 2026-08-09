@@ -277,7 +277,8 @@
     "address_confirmed": "تم تاكيد العنوان",
     "confirm_address_before_saving": "اكد هذا العنوان قبل الحفظ.",
     "confirm_address": "تاكيد العنوان",
-    "add_note_optional": "اضافة ملاحظة (اختياري)"
+    "add_note_optional": "اضافة ملاحظة (اختياري)",
+    "no_registered_name": "لا يوجد اسم Qortal مسجل لهذا العنوان. أدخل التسمية التي تريدها."
   },
   "app": {
     "changelog": "سجل التغييرات",

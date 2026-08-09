@@ -2,6 +2,13 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.3.5] - 2026-08-09
+
+### Fixed
+
+- QORT addresses without a registered Qortal name can now be saved in the Address Book. The form explains that no name is registered, lets you type your own label, and no longer clears the address while you type it.
+- Renaming an existing QORT contact whose address owns no registered name no longer wipes the address field.
+
 ## [1.3.4] - 2026-06-13
 
 ### Changed

@@ -278,7 +278,8 @@
     "address_confirmed": "地址已确认",
     "confirm_address_before_saving": "保存前请确认此地址。",
     "confirm_address": "确认地址",
-    "add_note_optional": "添加备注 (可选)"
+    "add_note_optional": "添加备注 (可选)",
+    "no_registered_name": "此地址没有注册的Qortal名称。请输入你自己的标签。"
   },
   "app": {
     "changelog": "更新日志",

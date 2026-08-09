@@ -173,6 +173,11 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
   >([]);
   const [qortResolvedContact, setQortResolvedContact] =
     useState<QortResolvedContact | null>(null);
+  // QORT address that the node reports has no registered name: the user is then
+  // free to pick their own label for it.
+  const [qortUnregisteredAddress, setQortUnregisteredAddress] = useState<
+    string | null
+  >(null);
 
   const isEditMode = !!entry;
   const existingQortContacts = useMemo(() => {
@@ -181,6 +186,13 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
       (contact) => contact.id !== entry?.id
     );
   }, [coinType, entry?.id, open]);
+
+  // The address in the field is known to have no registered Qortal name, so the
+  // name field holds a user-chosen label instead of a resolved name.
+  const isQortAddressUnregistered =
+    coinType === Coin.QORT &&
+    !!qortUnregisteredAddress &&
+    qortUnregisteredAddress === address.trim();
 
   const isNameSuggestionAlreadySaved = (
     suggestion: QortalNameSearchResult
@@ -232,6 +244,7 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
             }
           : null
       );
+      setQortUnregisteredAddress(null);
     }
   }, [open, entry, prefillName, prefillAddress, coinType]);
 
@@ -294,12 +307,18 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
     };
   }, [name, coinType, nameLookupEnabled, t]);
 
+  // Resolves a typed QORT address to its primary name. An address without a
+  // registered name is not an error: it only means the user has to label it.
   useEffect(() => {
     const addressQuery = address.trim();
+    // Editing an existing contact never refills the name field, but the stored
+    // address is still checked so a custom label stays editable.
+    const isSilentLookup =
+      open && !addressLookupEnabled && entry?.address.trim() === addressQuery;
 
     if (
       coinType !== Coin.QORT ||
-      !addressLookupEnabled ||
+      (!addressLookupEnabled && !isSilentLookup) ||
       !addressQuery ||
       !QORT_ADDRESS_PATTERN.test(addressQuery)
     ) {
@@ -309,7 +328,9 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
       return;
     }
 
-    setAddressValidating(true);
+    if (!isSilentLookup) {
+      setAddressValidating(true);
+    }
     let cancelled = false;
 
     const timeout = setTimeout(async () => {
@@ -323,34 +344,39 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
 
         if (cancelled) return;
 
-        if (typeof primaryName === 'string' && primaryName.trim()) {
-          const resolvedName = primaryName.trim();
+        const resolvedName =
+          typeof primaryName === 'string' ? primaryName.trim() : EMPTY_STRING;
+
+        if (resolvedName) {
+          setQortUnregisteredAddress(null);
+          // A silent lookup only reports whether a name exists; it must not
+          // overwrite the label or the pair confirmed from a name search.
+          if (isSilentLookup) return;
           setName(resolvedName);
           setNameError(EMPTY_STRING);
           setQortResolvedContact({
             address: addressQuery,
             name: resolvedName,
           });
-        } else {
-          setName(EMPTY_STRING);
-          setNameError(
-            t('core:message.error.recipient_not_found', {
-              postProcess: 'capitalizeFirstChar',
-            })
-          );
-          setQortResolvedContact(null);
+          return;
         }
+
+        setQortUnregisteredAddress(addressQuery);
+        setQortResolvedContact(null);
+        setNameError(EMPTY_STRING);
       } catch (err: any) {
-        if (!cancelled) {
-          console.error('Address owner lookup failed:', err.message);
-          setName(EMPTY_STRING);
-          setNameError(
-            t('core:message.error.recipient_lookup_failed', {
-              postProcess: 'capitalizeFirstChar',
-            })
-          );
-          setQortResolvedContact(null);
-        }
+        if (cancelled) return;
+
+        console.error('Address owner lookup failed:', err.message);
+        if (isSilentLookup) return;
+
+        setName(EMPTY_STRING);
+        setNameError(
+          t('core:message.error.recipient_lookup_failed', {
+            postProcess: 'capitalizeFirstChar',
+          })
+        );
+        setQortResolvedContact(null);
       } finally {
         if (!cancelled) {
           setAddressValidating(false);
@@ -362,7 +388,7 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [address, addressLookupEnabled, coinType, t]);
+  }, [address, addressLookupEnabled, coinType, entry, open, t]);
 
   const validateName = (value: string): boolean => {
     if (!value.trim()) {
@@ -440,14 +466,21 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setNameLookupEnabled(true);
     setName(value);
-    if (coinType === Coin.QORT) {
-      setAddressLookupEnabled(false);
-      setAddress(EMPTY_STRING);
-      setAddressConfirmed(false);
-      setAddressError(EMPTY_STRING);
-      setQortResolvedContact(null);
+    if (isQortAddressUnregistered) {
+      // Labelling an address that owns no name: keep it and skip name search.
+      setNameLookupEnabled(false);
+      setNameSearchOpen(false);
+      setNameSuggestions([]);
+    } else {
+      setNameLookupEnabled(true);
+      if (coinType === Coin.QORT) {
+        setAddressLookupEnabled(false);
+        setAddress(EMPTY_STRING);
+        setAddressConfirmed(false);
+        setAddressError(EMPTY_STRING);
+        setQortResolvedContact(null);
+      }
     }
     validateName(value);
   };
@@ -462,6 +495,7 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
       setNameSuggestions([]);
       setAddressLookupEnabled(true);
       setQortResolvedContact(null);
+      setQortUnregisteredAddress(null);
     }
     setAddress(value);
     setAddressConfirmed(false);
@@ -510,6 +544,7 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
       address: resolvedAddress.trim(),
       name: suggestion.name.trim(),
     });
+    setQortUnregisteredAddress(null);
     setNameSearchOpen(false);
     setNameSuggestions([]);
     validateName(suggestion.name);
@@ -519,6 +554,7 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
   const handleConfirmAddress = () => {
     if (
       coinType === Coin.QORT &&
+      !isQortAddressUnregistered &&
       (!qortResolvedContact ||
         qortResolvedContact.address !== address.trim() ||
         qortResolvedContact.name !== name.trim())
@@ -540,6 +576,7 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
 
   const isQortResolvedContactCurrent =
     coinType !== Coin.QORT ||
+    isQortAddressUnregistered ||
     (!!qortResolvedContact &&
       qortResolvedContact.address === address.trim() &&
       qortResolvedContact.name === name.trim());
@@ -696,7 +733,12 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
               value={name}
               onChange={handleNameChange}
               error={!!nameError}
-              helperText={nameError || EMPTY_STRING}
+              helperText={
+                nameError ||
+                (isQortAddressUnregistered
+                  ? t('core:address_book_ui.no_registered_name')
+                  : EMPTY_STRING)
+              }
               slotProps={{
                 htmlInput: {
                   maxLength: ADDRESSBOOK_NAME_LENGTH,

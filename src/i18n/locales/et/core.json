@@ -277,7 +277,8 @@
     "address_confirmed": "Aadress kinnitatud",
     "confirm_address_before_saving": "Kinnita see aadress enne salvestamist.",
     "confirm_address": "Kinnita aadress",
-    "add_note_optional": "Lisa markus (valikuline)"
+    "add_note_optional": "Lisa markus (valikuline)",
+    "no_registered_name": "Sellele aadressile pole registreeritud ühtegi Qortali nime. Sisesta oma silt."
   },
   "app": {
     "changelog": "MUUDATUSTE LOGI",

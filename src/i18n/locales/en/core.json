@@ -277,7 +277,8 @@
     "address_confirmed": "Address confirmed",
     "confirm_address_before_saving": "Confirm this address before saving.",
     "confirm_address": "Confirm address",
-    "add_note_optional": "Add a note (optional)"
+    "add_note_optional": "Add a note (optional)",
+    "no_registered_name": "No Qortal name is registered for this address. Enter your own label."
   },
   "app": {
     "changelog": "CHANGELOG",
