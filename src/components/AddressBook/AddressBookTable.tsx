@@ -212,7 +212,10 @@ export const AddressBookTable: React.FC<AddressBookTableProps> = ({
       }}
     >
       {onToggleFavorite && (
-        <Tooltip title={entry.favorite ? 'Remove favorite' : 'Favorite'} placement="top">
+        <Tooltip
+          title={entry.favorite ? 'Remove favorite' : 'Favorite'}
+          placement="top"
+        >
           <IconButton
             size="small"
             onClick={(event) => {
@@ -711,9 +714,7 @@ export const AddressBookTable: React.FC<AddressBookTableProps> = ({
                 </Avatar>
                 <Tooltip title={entry.name || EMPTY_STRING} placement="top">
                   <NameText
-                    name={
-                      entry.coinType === Coin.QORT ? entry.name : undefined
-                    }
+                    name={entry.coinType === Coin.QORT ? entry.name : undefined}
                     fallback={entry.name || '-'}
                     sx={{ ...cellTextSx, color: 'text.primary' }}
                   />

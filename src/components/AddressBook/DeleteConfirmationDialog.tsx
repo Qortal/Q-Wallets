@@ -32,9 +32,7 @@ export const DeleteConfirmationDialog: React.FC<
         paper: {
           sx: {
             bgcolor: (t: Theme) =>
-              t.palette.mode === 'dark'
-                ? 'rgba(3, 17, 29, 0.985)'
-                : '#ffffff',
+              t.palette.mode === 'dark' ? 'rgba(3, 17, 29, 0.985)' : '#ffffff',
             backgroundImage: (t: Theme) =>
               t.palette.mode === 'dark'
                 ? 'radial-gradient(circle at 13% 6%, rgba(24,189,242,0.13), transparent 30%), linear-gradient(180deg, rgba(5,24,39,0.99) 0%, rgba(3,13,23,0.995) 100%)'

@@ -177,10 +177,9 @@ export const FeeManager = ({ coin, onChange }: FeeManagerProps) => {
           onClick={() => setAdvancedOpen((current) => !current)}
           sx={{
             bgcolor: advancedOpen ? 'rgba(24,189,242,0.08)' : 'transparent',
-            borderColor:
-              advancedOpen
-                ? 'rgba(24,189,242,0.54)'
-                : 'rgba(116,158,180,0.2)',
+            borderColor: advancedOpen
+              ? 'rgba(24,189,242,0.54)'
+              : 'rgba(116,158,180,0.2)',
             borderRadius: 1.2,
             color: advancedOpen ? 'primary.main' : 'text.primary',
             fontSize: 12,

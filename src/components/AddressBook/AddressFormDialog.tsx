@@ -79,9 +79,7 @@ const fieldLabelSx = {
 const formFieldSx = {
   '& .MuiOutlinedInput-root': {
     bgcolor: (t: Theme) =>
-      t.palette.mode === 'dark'
-        ? 'rgba(0,8,16,0.2)'
-        : 'rgba(255,255,255,0.76)',
+      t.palette.mode === 'dark' ? 'rgba(0,8,16,0.2)' : 'rgba(255,255,255,0.76)',
     borderRadius: 1.35,
     minHeight: { xs: 54, sm: 56 },
     px: { xs: 1.2, sm: 1.35 },
@@ -194,9 +192,7 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
     !!qortUnregisteredAddress &&
     qortUnregisteredAddress === address.trim();
 
-  const isNameSuggestionAlreadySaved = (
-    suggestion: QortalNameSearchResult
-  ) => {
+  const isNameSuggestionAlreadySaved = (suggestion: QortalNameSearchResult) => {
     const suggestionName = suggestion.name.trim().toLowerCase();
     const suggestionOwner = (suggestion.owner || EMPTY_STRING).trim();
 
@@ -612,9 +608,7 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
         paper: {
           sx: {
             bgcolor: (t: Theme) =>
-              t.palette.mode === 'dark'
-                ? 'rgba(3, 17, 29, 0.985)'
-                : '#ffffff',
+              t.palette.mode === 'dark' ? 'rgba(3, 17, 29, 0.985)' : '#ffffff',
             backgroundImage: (t: Theme) =>
               t.palette.mode === 'dark'
                 ? 'radial-gradient(circle at 13% 6%, rgba(24,189,242,0.13), transparent 30%), linear-gradient(180deg, rgba(5,24,39,0.99) 0%, rgba(3,13,23,0.995) 100%)'
@@ -765,9 +759,7 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
               sx={formFieldSx}
             />
             {coinType === Coin.QORT && nameSearchOpen && (
-              <ClickAwayListener
-                onClickAway={() => setNameSearchOpen(false)}
-              >
+              <ClickAwayListener onClickAway={() => setNameSearchOpen(false)}>
                 <Box
                   sx={{
                     bgcolor: (t: Theme) =>
