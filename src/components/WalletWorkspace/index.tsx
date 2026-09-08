@@ -65,6 +65,7 @@ import {
   copyToClipboard,
   cropString,
   epochToAgo,
+  epochToDateTime,
 } from '../../common/functions';
 import {
   CustomWidthTooltip,
@@ -461,9 +462,7 @@ function ReceiveQrDialog({
           sx: {
             ...getWalletVars(visual),
             backgroundColor: (t: Theme) =>
-              t.palette.mode === 'dark'
-                ? 'rgba(3, 17, 29, 0.985)'
-                : '#ffffff',
+              t.palette.mode === 'dark' ? 'rgba(3, 17, 29, 0.985)' : '#ffffff',
             backgroundImage: (t: Theme) =>
               t.palette.mode === 'dark'
                 ? 'radial-gradient(circle at 16% 8%, color-mix(in srgb, var(--wallet-accent) 16%, transparent), transparent 34%), linear-gradient(180deg, rgba(5,24,39,0.99) 0%, rgba(3,13,23,0.995) 100%)'
@@ -514,8 +513,8 @@ function ReceiveQrDialog({
               fontWeight: 800,
               letterSpacing: 0,
               lineHeight: 1.1,
-          }}
-        >
+            }}
+          >
             {t('core:wallet.receive_symbol', { symbol: visual.symbol })}
           </Typography>
           <Typography
@@ -736,12 +735,12 @@ export function WalletSummaryCard({
   const displayCopyAddressLabel =
     copyAddressLabel ??
     t('core:action.copy_address', { postProcess: 'capitalizeFirstChar' });
-  const displayHideReceiveLabel =
-    hideReceiveLabel ?? t('core:wallet.hide_qr');
+  const displayHideReceiveLabel = hideReceiveLabel ?? t('core:wallet.hide_qr');
   const displayNoAddressLabel =
     noAddressLabel ?? t('core:wallet.no_address_available');
   const displayReceiveLabel =
-    receiveLabel ?? t('core:wallet.receive', { postProcess: 'capitalizeFirstChar' });
+    receiveLabel ??
+    t('core:wallet.receive', { postProcess: 'capitalizeFirstChar' });
   const displaySendLabel =
     sendLabel ?? t('core:action.send', { postProcess: 'capitalizeFirstChar' });
   const addressLabel = address || displayNoAddressLabel;
@@ -2565,7 +2564,7 @@ export function WalletExternalTransactionsList({
                     placement="top"
                     title={
                       row.timestamp
-                        ? new Date(row.timestamp).toLocaleString()
+                        ? epochToDateTime(row.timestamp)
                         : labels.waitingConfirmation
                     }
                   >
@@ -2702,7 +2701,7 @@ export function WalletExternalTransactionsList({
                     placement="top"
                     title={
                       row.timestamp
-                        ? new Date(row.timestamp).toLocaleString()
+                        ? epochToDateTime(row.timestamp)
                         : labels.waitingConfirmation
                     }
                   >

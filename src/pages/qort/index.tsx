@@ -73,6 +73,7 @@ import {
 import {
   cropString,
   epochToAgo,
+  epochToDateTime,
   humanFileSize,
   timeoutDelay,
 } from '../../common/functions';
@@ -354,13 +355,12 @@ export default function QortalWallet() {
   const formatQortAmount = (value: unknown) => formatDecimal(value, 2, 2);
   const formatQortFee = (value: unknown) => formatDecimal(value, 2, 4);
 
-  
   // Safely-spendable max via integer-satoshi math (avoids the floating-point
   // boundary error). QORT has a deterministic on-chain fee and an account
   // model, so no extra safety buffer is needed.
   const maxSendableQortCoin = () =>
     calculateMaxSendable(walletBalanceQort, qortTxFee);
-  
+
   const emptyRowsPayment =
     page > 0
       ? Math.max(0, (1 + page) * rowsPerPage - paymentInfo?.length || 0)
@@ -1369,7 +1369,7 @@ export default function QortalWallet() {
                       <StyledTableCell style={{ width: 'auto' }} align="left">
                         <CustomWidthTooltip
                           placement="top"
-                          title={new Date(row?.timestamp).toLocaleString()}
+                          title={epochToDateTime(row?.timestamp)}
                         >
                           <Box>{epochToAgo(row?.timestamp)}</Box>
                         </CustomWidthTooltip>
@@ -1574,7 +1574,7 @@ export default function QortalWallet() {
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       <CustomWidthTooltip
                         placement="top"
-                        title={new Date(row?.timestamp).toLocaleString()}
+                        title={epochToDateTime(row?.timestamp)}
                       >
                         <Box>{epochToAgo(row?.timestamp)}</Box>
                       </CustomWidthTooltip>
@@ -1839,7 +1839,7 @@ export default function QortalWallet() {
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       <CustomWidthTooltip
                         placement="top"
-                        title={new Date(row?.timestamp).toLocaleString()}
+                        title={epochToDateTime(row?.timestamp)}
                       >
                         <Box>{epochToAgo(row?.timestamp)}</Box>
                       </CustomWidthTooltip>
@@ -2154,7 +2154,7 @@ export default function QortalWallet() {
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       <CustomWidthTooltip
                         placement="top"
-                        title={new Date(row?.timestamp).toLocaleString()}
+                        title={epochToDateTime(row?.timestamp)}
                       >
                         <Box>{epochToAgo(row?.timestamp)}</Box>
                       </CustomWidthTooltip>
@@ -2372,7 +2372,7 @@ export default function QortalWallet() {
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       <CustomWidthTooltip
                         placement="top"
-                        title={new Date(row?.timestamp).toLocaleString()}
+                        title={epochToDateTime(row?.timestamp)}
                       >
                         <Box>{epochToAgo(row?.timestamp)}</Box>
                       </CustomWidthTooltip>
@@ -2585,7 +2585,7 @@ export default function QortalWallet() {
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       <CustomWidthTooltip
                         placement="top"
-                        title={new Date(row?.timestamp).toLocaleString()}
+                        title={epochToDateTime(row?.timestamp)}
                       >
                         <Box>{epochToAgo(row?.timestamp)}</Box>
                       </CustomWidthTooltip>
@@ -2770,7 +2770,7 @@ export default function QortalWallet() {
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       <CustomWidthTooltip
                         placement="top"
-                        title={new Date(row?.timestamp).toLocaleString()}
+                        title={epochToDateTime(row?.timestamp)}
                       >
                         <Box>{epochToAgo(row?.timestamp)}</Box>
                       </CustomWidthTooltip>
@@ -3033,7 +3033,7 @@ export default function QortalWallet() {
                     <StyledTableCell style={{ width: 'auto' }} align="left">
                       <CustomWidthTooltip
                         placement="top"
-                        title={new Date(row?.timestamp).toLocaleString()}
+                        title={epochToDateTime(row?.timestamp)}
                       >
                         <Box>{epochToAgo(row?.timestamp)}</Box>
                       </CustomWidthTooltip>
@@ -3398,7 +3398,7 @@ export default function QortalWallet() {
                         {row?.timestamp > 0 ? (
                           <CustomWidthTooltip
                             placement="top"
-                            title={new Date(row?.timestamp).toLocaleString()}
+                            title={epochToDateTime(row?.timestamp)}
                           >
                             <Box>{epochToAgo(row?.timestamp)}</Box>
                           </CustomWidthTooltip>
@@ -3995,7 +3995,7 @@ export default function QortalWallet() {
     const renderTimeCell = (row: any) => (
       <CustomWidthTooltip
         placement="top"
-        title={new Date(row?.timestamp).toLocaleString()}
+        title={epochToDateTime(row?.timestamp)}
       >
         <Typography
           sx={{
@@ -4355,7 +4355,7 @@ export default function QortalWallet() {
                       placement="top"
                       title={
                         row?.timestamp
-                          ? new Date(row.timestamp).toLocaleString()
+                          ? epochToDateTime(row.timestamp)
                           : t('core:transaction_status.pending_confirmation')
                       }
                     >

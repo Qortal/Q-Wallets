@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   epochToAgo,
+  epochToDateTime,
   secondsToDhms,
   cropString,
   humanFileSize,
@@ -52,6 +53,27 @@ describe('common/functions', () => {
         d.getMonth() + 1
       ).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
       expect(epochToAgo(epoch)).toBe(expected);
+    });
+  });
+
+  describe('epochToDateTime', () => {
+    it('returns "-" for non-finite or invalid input', () => {
+      expect(epochToDateTime(Number.NaN)).toBe('-');
+      expect(epochToDateTime(Number.POSITIVE_INFINITY)).toBe('-');
+    });
+
+    it('formats as dd/mm/yyyy hh:mm:ss (local time)', () => {
+      const epoch = new Date(2026, 8, 5, 7, 4, 3).getTime();
+      expect(epochToDateTime(epoch)).toBe('05/09/2026 07:04:03');
+    });
+
+    it('agrees with epochToAgo about the day/month order', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 8, 20, 12, 0, 0));
+      const epoch = new Date(2026, 8, 5, 7, 4, 3).getTime();
+      expect(epochToAgo(epoch)).toBe('05/09/26');
+      expect(epochToDateTime(epoch).startsWith('05/09/2026')).toBe(true);
+      vi.useRealTimers();
     });
   });
 
