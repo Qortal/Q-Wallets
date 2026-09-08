@@ -643,8 +643,7 @@ export default function AppLayout() {
             justifyContent: 'flex-end',
             minWidth: 54,
           }}
-        >
-        </Box>
+        ></Box>
       </Box>
     </Box>
   );

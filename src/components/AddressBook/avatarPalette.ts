@@ -11,10 +11,7 @@ export const addressBookAvatarColors = [
   '#E2B7FF',
 ];
 
-export const getAddressBookAvatarColor = (
-  seed: string,
-  fallbackIndex = 0
-) => {
+export const getAddressBookAvatarColor = (seed: string, fallbackIndex = 0) => {
   const source = seed.trim() || String(fallbackIndex);
   let hash = 0;
 

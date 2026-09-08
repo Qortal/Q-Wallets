@@ -31,6 +31,27 @@ export function epochToAgo(epoch: number) {
   return `${dayOfMonth}/${month}/${year}`;
 }
 
+/**
+ * Full timestamp in the same day-first order `epochToAgo` uses for older
+ * entries (`DD/MM/YYYY HH:mm:ss`), so a row and its tooltip never disagree
+ * about which number is the day and which is the month.
+ */
+export function epochToDateTime(epoch: number) {
+  const date = new Date(epoch);
+  if (!Number.isFinite(epoch) || Number.isNaN(date.getTime())) {
+    return '-';
+  }
+
+  const dayOfMonth = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear());
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+
+  return `${dayOfMonth}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+}
+
 export function secondsToDhms(seconds: number) {
   seconds = Number(seconds);
 
@@ -54,7 +75,9 @@ export function timeoutDelay(delay: number) {
 export function cropString(str: string, max_length: number = 24) {
   let one_third: number = max_length / 3;
   return str.length > max_length
-    ? str.substring(0, one_third) + '...' + str.substring(str.length - one_third)
+    ? str.substring(0, one_third) +
+        '...' +
+        str.substring(str.length - one_third)
     : str;
 }
 
@@ -98,7 +121,7 @@ export async function copyToClipboard(text: string): Promise<void> {
   if (processed) return;
 
   console.info('Using clipboard legacy fallback');
-  
+
   // Fallback for older browsers or non-HTTPS contexts
   const textArea = document.createElement('textarea');
   textArea.value = text;

@@ -922,15 +922,15 @@ export default function PirateWallet() {
         </Snackbar>
         <ExternalSendForm
           addressError={addressFormatError}
-          addressHelperText={
-            t('core:message.generic.pirate_chain_address', {
-              postProcess: 'capitalizeFirstChar',
-            })
-          }
+          addressHelperText={t('core:message.generic.pirate_chain_address', {
+            postProcess: 'capitalizeFirstChar',
+          })}
           addressInputId="arrr-address"
           afterRecipientContent={
             <Box sx={{ display: 'grid', gap: 0.85 }}>
-              <Typography sx={arrrSendLabelSx}>{t('core:send.memo')}</Typography>
+              <Typography sx={arrrSendLabelSx}>
+                {t('core:send.memo')}
+              </Typography>
               <TextField
                 id="arrr-memo"
                 value={arrrMemo}

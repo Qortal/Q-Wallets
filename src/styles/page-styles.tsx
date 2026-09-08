@@ -23,25 +23,12 @@ export const Transition = forwardRef(function Transition(
   ref: Ref<unknown>
 ) {
   const { timeout = FAST_DIALOG_TRANSITION_MS, ...slideProps } = props;
-  return (
-    <Slide
-      ref={ref}
-      timeout={timeout}
-      {...slideProps}
-      direction="up"
-    />
-  );
+  return <Slide ref={ref} timeout={timeout} {...slideProps} direction="up" />;
 });
 
 export function SlideTransition(props: ComponentProps<typeof Slide>) {
   const { timeout = FAST_DIALOG_TRANSITION_MS, ...slideProps } = props;
-  return (
-    <Slide
-      timeout={timeout}
-      {...slideProps}
-      direction="up"
-    />
-  );
+  return <Slide timeout={timeout} {...slideProps} direction="up" />;
 }
 
 export const DialogGeneral = styled(Dialog)(({ theme }: { theme: Theme }) => ({
